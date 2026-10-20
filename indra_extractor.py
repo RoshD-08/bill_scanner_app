@@ -1,6 +1,6 @@
 """
 indra_extractor.py
-Local OCR & Bill Information Extraction using the Hugging Face model:
+Local OCR & Intelligent Bill / Receipt Parser using the Hugging Face model:
 datalab-to/indra-ocr (ONNX Runtime, runs 100% on CPU, zero API keys required).
 """
 
@@ -79,6 +79,52 @@ def parse_payment_method(text: str) -> str:
     return "Other"
 
 
+def clean_vendor_name(lines, full_text: str) -> str:
+    """Extract and normalize vendor/store name."""
+    text_upper = full_text.upper()
+
+    # Known popular brands and supermarkets
+    known_merchants = [
+        ("SPAR", ["SPAR", "SSPAR", "SPARSRILANKA", "SPARLANKA"]),
+        ("Keells Super", ["KEELLS"]),
+        ("Cargills Food City", ["CARGILLS", "FOOD CITY"]),
+        ("Arpico Supercentre", ["ARPICO"]),
+        ("Softlogic GLOMARK", ["GLOMARK"]),
+        ("Laugfs Supermarket", ["LAUGFS"]),
+        ("Pizza Hut", ["PIZZA HUT"]),
+        ("Domino's Pizza", ["DOMINO"]),
+        ("McDonald's", ["MCDONALD"]),
+        ("KFC", ["KFC"]),
+        ("Burger King", ["BURGER KING"]),
+        ("Uber", ["UBER", "UBER EATS"]),
+        ("PickMe", ["PICKME"]),
+        ("Dialog Axiata", ["DIALOG"]),
+        ("Mobitel / SLT", ["MOBITEL", "SLT"]),
+    ]
+
+    for brand, triggers in known_merchants:
+        for trig in triggers:
+            if trig in text_upper:
+                top_line = lines[0].strip() if lines else ""
+                clean_top = re.sub(r"[^A-Za-z0-9\s]", "", top_line).strip()
+                if clean_top and clean_top.upper() != brand.upper() and len(clean_top) < 25:
+                    return f"{brand} ({clean_top.title()})"
+                return brand
+
+    # Fallback to first non-generic top line
+    skip = {
+        "RECEIPT", "TAX INVOICE", "INVOICE", "CASH RECEIPT", "BILL",
+        "WELCOME", "CUSTOMER COPY", "OFFICIAL RECEIPT", "TAX"
+    }
+    for l in lines[:5]:
+        clean = re.sub(r"^[#\s*_-]+", "", l).strip()
+        clean = re.sub(r"[^A-Za-z0-9\s&\'.-]", "", clean).strip()
+        if clean and clean.upper() not in skip and len(clean) > 2 and not re.match(r"^\d+$", clean):
+            return clean.title()
+
+    return "Unknown Vendor"
+
+
 def categorize_bill(text: str, vendor: str) -> str:
     """Assign spending category based on keywords in bill content and vendor name."""
     combined = (vendor + " " + text).lower()
@@ -92,7 +138,7 @@ def categorize_bill(text: str, vendor: str) -> str:
         ("Groceries", [
             "supermarket", "grocery", "groceries", "market", "mart", "keells", "cargills",
             "spar", "costco", "walmart", "whole foods", "produce", "meat", "veg",
-            "milk", "bread", "eggs", "rice", "flour", "sugar"
+            "milk", "bread", "eggs", "rice", "flour", "sugar", "biscuit", "butter", "cheese"
         ]),
         ("Transportation", [
             "taxi", "cab", "uber", "pickme", "lyft", "fuel", "petrol", "diesel",
@@ -130,6 +176,131 @@ def categorize_bill(text: str, vendor: str) -> str:
     return "Other"
 
 
+def extract_receipt_items(pages) -> list:
+    """Extract individual line items, quantities, and prices using spatial and textual analysis."""
+    lines = [l for p in pages for l in getattr(p, "lines", []) if l.text.strip()]
+    if not lines:
+        return []
+
+    # 1. Spatial Y-Coordinate Clustering into Receipt Rows
+    sorted_lines = sorted(lines, key=lambda l: (l.box[1], l.box[0]))
+    rows = []
+    curr_row = []
+    curr_y = None
+
+    for l in sorted_lines:
+        y_mid = (l.box[1] + l.box[3]) / 2.0
+        h = l.box[3] - l.box[1]
+        if curr_y is None or abs(y_mid - curr_y) < (h * 0.6):
+            curr_row.append(l)
+            curr_y = y_mid if curr_y is None else (curr_y + y_mid) / 2.0
+        else:
+            curr_row.sort(key=lambda item: item.box[0])
+            rows.append(curr_row)
+            curr_row = [l]
+            curr_y = y_mid
+
+    if curr_row:
+        curr_row.sort(key=lambda item: item.box[0])
+        rows.append(curr_row)
+
+    stop_words = [
+        "SUBTOTAL", "SUB TOTAL", "TOTAL", "NET TOTAL", "NET AMOUNT", "AMOUNT DUE",
+        "BALANCE", "CASH", "CHANGE", "TENDERED", "ITEMS :", "ITEMS:", "ITEM COUNT",
+        "TOTAL QUANTITY", "PAYMENT", "THANK YOU", "CARD", "VISA", "MASTERCARD",
+        "CASHIER", "TERMINAL", "END TIME", "NON-DISCOUNTED"
+    ]
+    header_words = ["PRODUC", "ITEM", "DESCRIPTION", "PRICE", "QTY", "0TY", "AMOUNT", "AMOUN", "RATE"]
+
+    def is_header(text):
+        u = text.upper()
+        return sum(1 for hw in header_words if hw in u) >= 2 or any(hw in u for hw in ["PRODUC", "DESCRIPTION"])
+
+    def is_stop(text):
+        u = text.upper()
+        return any(sw in u for sw in stop_words)
+
+    def extract_prices(text):
+        matches = re.findall(r"\b\d{1,6}(?:\.\d{2})\b", text)
+        return [float(m.replace(",", "")) for m in matches]
+
+    items = []
+    in_items = False
+    pending_desc = None
+    has_explicit_header = any(is_header(" ".join(l.text.strip() for l in r)) for r in rows)
+
+    for r in rows:
+        row_str = " ".join(l.text.strip() for l in r)
+        upper_str = row_str.upper()
+
+        if has_explicit_header and not in_items:
+            if is_header(row_str):
+                in_items = True
+            continue
+        elif not has_explicit_header and not in_items:
+            if any(k in upper_str for k in ["DATE", "INVOICE", "TIME", "BILL NO", "ORDER"]):
+                in_items = True
+                continue
+
+        if in_items:
+            if is_stop(row_str):
+                break
+
+            prices = extract_prices(row_str)
+
+            if not prices:
+                # Text row without price: clean description (remove leading index like '1 ' or '01 ')
+                clean = re.sub(r"^\d+\s+", "", row_str).strip()
+                if len(clean) > 2 and re.search(r"[a-zA-Z]", clean):
+                    if pending_desc:
+                        pending_desc += " " + clean
+                    else:
+                        pending_desc = clean
+            else:
+                # Prices detected on this row
+                if pending_desc:
+                    # Multi-row item: description was on preceding row
+                    unit_p = prices[-2] if len(prices) >= 2 else prices[0]
+                    tot = prices[-1]
+                    qty = 1.0
+                    if unit_p > 0:
+                        computed_qty = round(tot / unit_p, 2)
+                        if 0.05 <= computed_qty <= 100:
+                            qty = computed_qty
+
+                    items.append({
+                        "name": pending_desc,
+                        "quantity": qty,
+                        "unit_price": unit_p,
+                        "total": tot
+                    })
+                    pending_desc = None
+                else:
+                    # Single-row item: description & price on same row
+                    desc_part = re.sub(r"\b\d{1,6}(?:\.\d{2})\b", "", row_str).strip()
+                    desc_part = re.sub(r"\b\d+\s*[xX@]\s*", "", desc_part).strip()
+                    desc_part = re.sub(r"^\d+\s+", "", desc_part).strip()
+                    desc_part = re.sub(r"[^a-zA-Z0-9\s&\'/.-]", "", desc_part).strip()
+
+                    if len(desc_part) > 2 and re.search(r"[a-zA-Z]", desc_part):
+                        unit_p = prices[0]
+                        tot = prices[-1]
+                        qty = 1.0
+                        if unit_p > 0:
+                            computed_qty = round(tot / unit_p, 2)
+                            if 0.05 <= computed_qty <= 100:
+                                qty = computed_qty
+
+                        items.append({
+                            "name": desc_part,
+                            "quantity": qty,
+                            "unit_price": unit_p,
+                            "total": tot
+                        })
+
+    return items
+
+
 def extract_bill_data_local(image_path: str) -> dict:
     """Extract bill information using local Hugging Face model datalab-to/indra-ocr."""
     try:
@@ -145,7 +316,6 @@ def extract_bill_data_local(image_path: str) -> dict:
                 "category": "Other", "raw_text": "",
             }
 
-        # Combine all lines and markdown
         full_markdown = "\n\n".join(p.markdown for p in pages)
         all_lines = []
         for p in pages:
@@ -159,14 +329,8 @@ def extract_bill_data_local(image_path: str) -> dict:
 
         raw_text = "\n".join(all_lines)
 
-        # 1. Vendor Name: Usually the first non-generic heading
-        skip_words = {"RECEIPT", "TAX INVOICE", "INVOICE", "CASH RECEIPT", "BILL", "WELCOME", "CUSTOMER COPY"}
-        vendor_name = "Unknown Vendor"
-        for line in all_lines[:5]:
-            clean_l = re.sub(r"^[#\s*_-]+", "", line).strip()
-            if clean_l and clean_l.upper() not in skip_words and len(clean_l) > 2:
-                vendor_name = clean_l
-                break
+        # 1. Vendor Name
+        vendor_name = clean_vendor_name(all_lines, raw_text)
 
         # 2. Bill Date
         bill_date = parse_date(raw_text)
@@ -174,13 +338,16 @@ def extract_bill_data_local(image_path: str) -> dict:
         # 3. Bill / Invoice Number
         bill_number = ""
         inv_match = re.search(
-            r"(?:inv(?:oice)?|rec(?:eipt)?|bill|order|ref)[#:\s.-]*([A-Za-z0-9\-_]{3,20})",
+            r"(?:inv[a-z]*|receipt|rec[a-z]*|bill|order|ref)[.\s]*(?:no|num|number)?\s*[:#.-]\s*([A-Za-z0-9\-_]{3,30})",
             raw_text, re.IGNORECASE
         )
         if inv_match:
             bill_number = inv_match.group(1).strip()
 
-        # 4. Total Amount: search from bottom up for total keywords
+        # 4. Extract Line Items using Spatial / Multi-row Parser
+        items = extract_receipt_items(pages)
+
+        # 5. Total & Tax Amount
         total_amount = 0.0
         tax_amount = 0.0
 
@@ -198,7 +365,6 @@ def extract_bill_data_local(image_path: str) -> dict:
                     except ValueError:
                         pass
 
-        # 5. Tax Amount
         for line in all_lines:
             upper_line = line.upper()
             if any(k in upper_line for k in ["TAX", "VAT", "GST", "SERVICE CHARGE"]):
@@ -210,44 +376,22 @@ def extract_bill_data_local(image_path: str) -> dict:
                     except ValueError:
                         pass
 
+        # Cross-validate total against items sum
+        sum_of_items = sum(it["total"] for it in items)
+        if sum_of_items > 0:
+            if total_amount == 0.0 or abs(total_amount - sum_of_items) > (sum_of_items * 0.5):
+                total_amount = sum_of_items + tax_amount
+
+        # Fallback if no items detected but total is known
+        if not items and total_amount > 0:
+            items = [{"name": vendor_name or "Total Purchase", "quantity": 1.0, "unit_price": total_amount, "total": total_amount}]
+
         # 6. Currency & Payment Method
         currency = parse_currency(raw_text)
         payment_method = parse_payment_method(raw_text)
 
         # 7. Category
         category = categorize_bill(raw_text, vendor_name)
-
-        # 8. Line items parsing
-        items = []
-        for line in all_lines:
-            # Check for pattern: Description ... Qty x Price ... Total
-            # e.g., "Milk Pack 1L 1 x 450.00 450.00" or "Bread 2 @ 150 300.00"
-            m = re.search(r"^(.*?)\s+(\d+)\s*[xX@]\s*(\d+(?:\.\d{2})?)\s+(\d+(?:\.\d{2})?)$", line)
-            if m:
-                desc = m.group(1).strip()
-                qty = float(m.group(2))
-                price = float(m.group(3))
-                tot = float(m.group(4))
-                if desc and tot > 0:
-                    items.append({"name": desc, "quantity": qty, "unit_price": price, "total": tot})
-                continue
-
-            # Check for pattern: Description ... Amount
-            m2 = re.search(r"^(.*?)[\t ]{2,}(\d+(?:\.\d{2}))\s*$", line)
-            if m2:
-                desc = m2.group(1).strip()
-                amt = float(m2.group(2))
-                upper_desc = desc.upper()
-                if not any(k in upper_desc for k in ["TOTAL", "SUBTOTAL", "TAX", "CASH", "CHANGE", "CARD", "BALANCE"]):
-                    items.append({"name": desc, "quantity": 1.0, "unit_price": amt, "total": amt})
-
-        # If total was not found from bottom line, fallback to sum of items
-        if total_amount == 0.0 and items:
-            total_amount = sum(it["total"] for it in items) + tax_amount
-
-        # If no items found, create single item with vendor/bill name
-        if not items and total_amount > 0:
-            items = [{"name": vendor_name or "Total Purchase", "quantity": 1.0, "unit_price": total_amount, "total": total_amount}]
 
         return {
             "vendor_name": vendor_name,
