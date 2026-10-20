@@ -1,0 +1,23 @@
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables & secrets
+.env
+
+# Database
+bills.db
+*.sqlite3
+
+# Uploaded bill images (keep folder via .gitkeep)
+static/uploads/*
+!static/uploads/.gitkeep
+
+# macOS
+.DS_Store
