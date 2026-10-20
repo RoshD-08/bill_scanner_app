@@ -32,5 +32,13 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+# Start Ollama service if installed and not running
+if command -v ollama >/dev/null 2>&1; then
+    if ! curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+        echo "Starting Ollama daemon..."
+        brew services start ollama 2>/dev/null || ollama serve >/dev/null 2>&1 &
+    fi
+fi
+
 echo "Starting AI Bill Scanner Application..."
 "$PYTHON" app.py

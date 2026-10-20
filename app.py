@@ -19,6 +19,10 @@ from database import (
 )
 from indra_extractor import extract_bill_data_local
 from ai_extractor import extract_bill_data
+from ollama_extractor import (
+    extract_bill_data_ollama, is_ollama_running,
+    get_available_models
+)
 
 # Load .env file
 load_dotenv()
@@ -74,11 +78,19 @@ def upload():
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
     file.save(file_path)
 
-    # Perform extraction using the local Hugging Face model (indra-ocr) by default
-    engine = request.form.get("engine", "indra").lower()
-    if engine == "gemini":
+    # Model extraction: Defaults to Meta Llama 3.2 via Ollama
+    engine = request.form.get("engine", "llama3.2").lower()
+
+    if engine in ["llama", "llama3.2", "ollama"]:
+        extracted = extract_bill_data_ollama(file_path)
+        # If Ollama is not yet started, fallback smoothly to local Indra OCR
+        if extracted.get("error"):
+            fallback = extract_bill_data_local(file_path)
+            if not fallback.get("error"):
+                fallback["warning"] = f"Llama 3.2: {extracted['error']} (used Indra OCR fallback)"
+                extracted = fallback
+    elif engine == "gemini":
         extracted = extract_bill_data(file_path)
-        # If Gemini fails or lacks key, fallback to local model
         if extracted.get("error"):
             extracted = extract_bill_data_local(file_path)
     else:
@@ -87,6 +99,15 @@ def upload():
     extracted["image_path"] = unique_name
 
     return jsonify(extracted)
+
+
+@app.route("/api/ollama/status")
+def ollama_status():
+    """Return local Ollama daemon status and available models."""
+    return jsonify({
+        "running": is_ollama_running(),
+        "models": get_available_models()
+    })
 
 
 @app.route("/save", methods=["POST"])

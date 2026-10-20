@@ -1,14 +1,17 @@
-# 🧾 BillAI — Local AI Bill Scanner & Categorizer
+# 🧾 BillAI — Local AI Bill Scanner & Categorizer with Llama 3.2 & Indra OCR
 
-A standalone Python web application that extracts structured information from receipt/bill photos using the open-weights **Indra OCR model** ([`datalab-to/indra-ocr`](https://huggingface.co/datalab-to/indra-ocr)) from Hugging Face.
+A standalone Python web application that extracts structured information from receipt/bill photos using:
+1. **Meta Llama 3.2 via Ollama** ([`ollama.com/library/llama3.2`](https://ollama.com/library/llama3.2)) for intelligent LLM reasoning and semantic categorization.
+2. **Indra OCR** ([`datalab-to/indra-ocr`](https://huggingface.co/datalab-to/indra-ocr)) for fast, on-device OCR text recognition.
 
-**100% on-device CPU execution — Zero API keys required.**
+**100% local on-device execution — Zero cloud API keys required.**
 
 ---
 
 ## ✨ Features
 
-- **🤖 Local Hugging Face Model**: Powered by [`datalab-to/indra-ocr`](https://huggingface.co/datalab-to/indra-ocr) running on ONNX Runtime. Fast, private, and runs completely offline without sending your financial receipts to any cloud API.
+- **🦙 Meta Llama 3.2 Integration**: Uses Llama 3.2 running locally via [Ollama](https://ollama.com/library/llama3.2) to analyze bill text, handle complex formats, extract line items, and auto-categorize expenses.
+- **⚡ Fast On-Device OCR**: Powered by Hugging Face's `datalab-to/indra-ocr` (ONNX Runtime, ~18MB weights).
 - **📸 Direct Bill Ingestion**: Drag & drop receipt photos, browse files, or snap directly using a mobile camera.
 - **📑 Structured Extraction & Differentiation**:
   - Vendor / Merchant Name
@@ -34,11 +37,15 @@ A standalone Python web application that extracts structured information from re
 cd /Users/roshanedias/Downloads/Roshane_Practice/bill_scanner_app
 ./run.sh
 ```
+*(The startup script automatically verifies that the local Ollama daemon is running).*
 
 ### 2. Open in Browser
 👉 **[http://127.0.0.1:5002](http://127.0.0.1:5002)**
 
-*The first time you scan, the ONNX model weights (~75 MB total) are downloaded from Hugging Face and cached locally in `~/.cache/huggingface/` for offline reuse.*
+Select your model on the dashboard:
+- **🦙 Meta Llama 3.2 (Ollama)** *(Recommended)*
+- **⚡ Indra OCR (Local ONNX)**
+- **☁️ Google Gemini 2.0**
 
 ---
 
@@ -46,12 +53,13 @@ cd /Users/roshanedias/Downloads/Roshane_Practice/bill_scanner_app
 
 ```
 bill_scanner_app/
-├── app.py              # Flask server & endpoints
+├── app.py              # Flask server & routing
+├── ollama_extractor.py # Llama 3.2 extraction via Ollama
 ├── indra_extractor.py  # Local Indra OCR extraction (datalab-to/indra-ocr)
 ├── ai_extractor.py     # Optional Gemini Vision fallback
 ├── database.py         # SQLite database management (bills.db)
-├── run.sh              # One-click startup script
-├── requirements.txt    # Project dependencies (Flask, indra-ocr, Pillow, etc.)
+├── run.sh              # One-click startup script (auto-starts Ollama & Flask)
+├── requirements.txt    # Project dependencies
 ├── static/
 │   └── uploads/        # Stored receipt photos
 └── templates/

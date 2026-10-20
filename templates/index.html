@@ -9,13 +9,25 @@
   <!-- ========================================== -->
   <section id="uploadSection" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
     <div class="max-w-2xl mx-auto text-center mb-6">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 mb-3 shadow-xs">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        Model: Indra OCR (datalab-to/indra-ocr) &middot; Local CPU &middot; Zero API Key
+      <div class="inline-flex flex-wrap items-center justify-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200 mb-4 text-xs font-semibold">
+        <label class="px-3.5 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-2 has-[:checked]:bg-white has-[:checked]:text-slate-900 has-[:checked]:shadow-xs has-[:checked]:font-bold text-slate-600 hover:text-slate-900">
+          <input type="radio" name="modelEngineRadio" value="llama3.2" checked class="hidden">
+          <span>🦙 Meta Llama 3.2 (Ollama)</span>
+          <span id="ollamaStatusDot" class="w-2 h-2 rounded-full bg-amber-400" title="Checking Ollama..."></span>
+        </label>
+        <label class="px-3.5 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-2 has-[:checked]:bg-white has-[:checked]:text-slate-900 has-[:checked]:shadow-xs has-[:checked]:font-bold text-slate-600 hover:text-slate-900">
+          <input type="radio" name="modelEngineRadio" value="indra" class="hidden">
+          <span>⚡ Indra OCR (Local ONNX)</span>
+        </label>
+        <label class="px-3.5 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-2 has-[:checked]:bg-white has-[:checked]:text-slate-900 has-[:checked]:shadow-xs has-[:checked]:font-bold text-slate-600 hover:text-slate-900">
+          <input type="radio" name="modelEngineRadio" value="gemini" class="hidden">
+          <span>☁️ Google Gemini 2.0</span>
+        </label>
       </div>
+
       <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">AI Bill & Receipt Scanner</h1>
       <p class="text-slate-500 text-sm mt-2">
-        Upload or snap a photo of any receipt. The open-source Indra OCR model will extract vendor details, line items, totals, and automatically categorize it.
+        Upload or snap a photo of any receipt. Meta Llama 3.2 & Indra OCR will extract vendor details, line items, totals, and automatically categorize it.
       </p>
     </div>
 
@@ -523,6 +535,8 @@
 
     const formData = new FormData();
     formData.append('bill_image', file);
+    const selectedEngine = document.querySelector('input[name="modelEngineRadio"]:checked')?.value || 'llama3.2';
+    formData.append('engine', selectedEngine);
 
     fetch("{{ url_for('upload') }}", {
       method: 'POST',
@@ -712,6 +726,23 @@
       applyFilters();
     });
   }
+
+  // Live Ollama status ping
+  fetch("{{ url_for('ollama_status') }}")
+    .then(r => r.json())
+    .then(data => {
+      const dot = document.getElementById('ollamaStatusDot');
+      if (dot) {
+        if (data.running) {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+          dot.title = 'Ollama is active & ready';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-slate-300';
+          dot.title = 'Ollama not detected (will auto-fallback to Indra OCR)';
+        }
+      }
+    })
+    .catch(() => {});
 })();
 
 // Modal helpers
