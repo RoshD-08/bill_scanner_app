@@ -127,6 +127,7 @@ def get_all_bills(category=None, start_date=None, end_date=None, query=None):
 
         rows = conn.execute(sql, params).fetchall()
         bills = []
+        from currency import convert_to_lkr
         for r in rows:
             b = dict(r)
             try:
@@ -135,6 +136,7 @@ def get_all_bills(category=None, start_date=None, end_date=None, query=None):
                 parsed = []
             b["line_items"] = parsed
             b["items"] = parsed
+            b["total_amount_lkr"] = convert_to_lkr(b.get("total_amount", 0.0), b.get("currency", "LKR"))
             bills.append(b)
         return bills
     finally:
@@ -176,44 +178,71 @@ def delete_bill(bill_id):
 
 
 def get_category_summary():
-    """Aggregate statistics grouped by category."""
+    """
+    Aggregate statistics grouped by category, with all bill totals converted to LKR.
+    Ensures that foreign currencies (USD, EUR, INR, etc.) are converted to LKR
+    for accurate totals, grand total, and share-of-spend percentages.
+    """
+    from currency import convert_to_lkr
+
     conn = get_db()
     try:
-        # Grand total first
-        gt_row = conn.execute("""
-            SELECT COUNT(*) AS total_count, COALESCE(SUM(total_amount), 0.0) AS grand_total
-            FROM bills
-        """).fetchone()
-
-        total_count = gt_row["total_count"] if gt_row else 0
-        grand_total = float(gt_row["grand_total"]) if gt_row else 0.0
-
-        # Group by category
         rows = conn.execute("""
-            SELECT category,
-                   COUNT(*) AS bill_count,
-                   COALESCE(SUM(total_amount), 0.0) AS category_total,
-                   MAX(bill_date) AS latest_date
+            SELECT id, category, total_amount, currency, bill_date
             FROM bills
-            GROUP BY category
-            ORDER BY category_total DESC, bill_count DESC
         """).fetchall()
 
-        summary = []
+        cat_data = {}
+        grand_total_lkr = 0.0
+        total_count = len(rows)
+
         for r in rows:
-            cat_total = float(r["category_total"])
-            pct = (cat_total / grand_total * 100.0) if grand_total > 0 else 0.0
+            cat = r["category"] or "Other"
+            raw_amt = float(r["total_amount"] or 0.0)
+            curr = r["currency"] or "LKR"
+            amt_lkr = convert_to_lkr(raw_amt, curr)
+            bill_date = r["bill_date"] or ""
+
+            if cat not in cat_data:
+                cat_data[cat] = {
+                    "category": cat,
+                    "bill_count": 0,
+                    "total_amount": 0.0,
+                    "latest_date": "",
+                    "currencies_used": set(),
+                }
+
+            cat_data[cat]["bill_count"] += 1
+            cat_data[cat]["total_amount"] += amt_lkr
+            if curr.upper() != "LKR":
+                cat_data[cat]["currencies_used"].add(curr.upper())
+            if bill_date and (not cat_data[cat]["latest_date"] or bill_date > cat_data[cat]["latest_date"]):
+                cat_data[cat]["latest_date"] = bill_date
+
+            grand_total_lkr += amt_lkr
+
+        grand_total_lkr = round(grand_total_lkr, 2)
+
+        summary = []
+        for cat, data in cat_data.items():
+            tot = round(data["total_amount"], 2)
+            pct = round((tot / grand_total_lkr * 100.0), 1) if grand_total_lkr > 0 else 0.0
             summary.append({
-                "category": r["category"],
-                "bill_count": r["bill_count"],
-                "total_amount": cat_total,
-                "percentage": round(pct, 1),
-                "latest_date": r["latest_date"] or "-",
+                "category": cat,
+                "bill_count": data["bill_count"],
+                "total_amount": tot,
+                "percentage": pct,
+                "latest_date": data["latest_date"] or "-",
+                "has_converted": len(data["currencies_used"]) > 0,
+                "currencies_used": sorted(list(data["currencies_used"])),
             })
+
+        # Sort categories by total_amount descending
+        summary.sort(key=lambda x: (x["total_amount"], x["bill_count"]), reverse=True)
 
         return {
             "categories": summary,
-            "grand_total": grand_total,
+            "grand_total": grand_total_lkr,
             "total_count": total_count,
         }
     finally:
@@ -221,7 +250,7 @@ def get_category_summary():
 
 
 def export_bills_to_csv():
-    """Generate a clean CSV string of all bills."""
+    """Generate a clean CSV string of all bills including LKR converted amounts."""
     bills = get_all_bills()
     output = io.StringIO()
     writer = csv.writer(output)
@@ -235,6 +264,7 @@ def export_bills_to_csv():
         "Category",
         "Total Amount",
         "Currency",
+        "Total Amount (LKR)",
         "Tax Amount",
         "Payment Method",
         "Items Summary",
@@ -260,6 +290,7 @@ def export_bills_to_csv():
             b["category"],
             f"{b['total_amount']:.2f}",
             b["currency"],
+            f"{b.get('total_amount_lkr', b['total_amount']):.2f}",
             f"{b['tax_amount']:.2f}",
             b["payment_method"] or "",
             items_summary,

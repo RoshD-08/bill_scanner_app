@@ -17,6 +17,7 @@ from database import (
     delete_bill, get_category_summary,
     export_bills_to_csv, CATEGORIES
 )
+from currency import get_common_exchange_rates, fetch_live_rates
 from indra_extractor import extract_bill_data_local
 from ai_extractor import extract_bill_data
 from ollama_extractor import (
@@ -52,12 +53,24 @@ def index():
     """Main dashboard displaying upload zone, category summary, and all bills."""
     summary = get_category_summary()
     bills = get_all_bills()
+    rates = get_common_exchange_rates()
     return render_template(
         "index.html",
         summary=summary,
         bills=bills,
-        categories=CATEGORIES
+        categories=CATEGORIES,
+        exchange_rates=rates
     )
+
+
+@app.route("/api/currency/rates")
+def api_currency_rates():
+    """Return current exchange rates relative to LKR."""
+    return jsonify({
+        "base": "LKR",
+        "rates": fetch_live_rates(),
+        "common": get_common_exchange_rates()
+    })
 
 
 @app.route("/upload", methods=["POST"])

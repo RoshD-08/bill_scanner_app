@@ -21,3 +21,6 @@ static/uploads/*
 
 # macOS
 .DS_Store
+
+# Currency cache
+.currency_cache.json
