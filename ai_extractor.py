@@ -68,7 +68,7 @@ JSON format required:
   "items": [
     {{
       "name": "Item description",
-      "quantity": 1,
+      "quantity": 1.0,
       "unit_price": 0.0,
       "total": 0.0
     }}
@@ -83,7 +83,7 @@ JSON format required:
 
 Rules:
 1. All monetary fields must be numbers (float or int), not strings with currency symbols.
-2. If an item quantity or unit price is missing, use quantity: 1 and unit_price: item total.
+2. Item quantity can be integer or decimal (e.g. 0.5, 1.250). If quantity or unit price is missing, use quantity: 1 and unit_price: item total.
 3. If no line items can be distinguished, create one item with the vendor name or 'Total' and the grand total.
 4. Choose the most specific category from the allowed list.
 """
@@ -124,7 +124,10 @@ Rules:
         for item in result.get("items", []):
             if isinstance(item, dict):
                 try:
-                    qty = float(item.get("quantity") or item.get("qty") or 1)
+                    raw_q = item.get("quantity") if item.get("quantity") is not None else item.get("qty")
+                    qty = float(raw_q) if raw_q is not None else 1.0
+                    if qty <= 0:
+                        qty = 1.0
                 except (TypeError, ValueError):
                     qty = 1.0
                 try:

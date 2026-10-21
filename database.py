@@ -272,7 +272,7 @@ def export_bills_to_csv():
         items_desc = []
         for item in b.get("line_items", []):
             name = item.get("name", "")
-            qty = item.get("quantity") or item.get("qty") or 1
+            qty = item.get("quantity") if item.get("quantity") is not None else (item.get("qty") or 1)
             price = item.get("unit_price") or 0.0
             items_desc.append(f"{name} (x{qty} @ {price})")
         items_summary = "; ".join(items_desc)

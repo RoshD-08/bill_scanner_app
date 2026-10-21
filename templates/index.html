@@ -184,7 +184,7 @@
                 <thead>
                   <tr class="border-b border-slate-200 text-slate-500 font-semibold bg-white">
                     <th class="py-2.5 px-3">Item Description</th>
-                    <th class="py-2.5 px-2 w-20 text-right">Qty</th>
+                    <th class="py-2.5 px-2 w-24 text-right">Qty</th>
                     <th class="py-2.5 px-2 w-28 text-right">Unit Price</th>
                     <th class="py-2.5 px-2 w-28 text-right">Total</th>
                     <th class="py-2.5 px-2 w-10 text-center"></th>
@@ -617,7 +617,7 @@
         <input type="text" class="item-name w-full border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800" value="${escapeAttr(name || '')}" placeholder="Item description">
       </td>
       <td class="py-2 px-2">
-        <input type="number" step="1" min="0" class="item-qty w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs font-mono text-right" value="${qty || 1}">
+        <input type="number" step="any" min="0" class="item-qty w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs font-mono text-right" value="${(qty !== undefined && qty !== null && qty !== '') ? qty : 1}" placeholder="1.0">
       </td>
       <td class="py-2 px-2">
         <input type="number" step="0.01" min="0" class="item-price w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs font-mono text-right" value="${parseFloat(price || 0).toFixed(2)}">
@@ -717,7 +717,8 @@
     const items = [];
     document.querySelectorAll('#itemsTableBody tr').forEach(tr => {
       const name = tr.querySelector('.item-name').value.trim();
-      const qty = parseFloat(tr.querySelector('.item-qty').value) || 1;
+      const rawQty = parseFloat(tr.querySelector('.item-qty').value);
+      const qty = (!isNaN(rawQty) && rawQty > 0) ? rawQty : 1;
       const unit_price = parseFloat(tr.querySelector('.item-price').value) || 0;
       const total = parseFloat(tr.querySelector('.item-total').value) || 0;
       if (name || total > 0) {
@@ -817,8 +818,8 @@ function showItemsModal(id) {
         tr.className = 'border-b border-slate-100';
         tr.innerHTML = `
           <td class="py-2 font-sans font-medium text-slate-900">${it.name || 'Item'}</td>
-          <td class="py-2 text-right">${it.quantity || it.qty || 1}</td>
-          <td class="py-2 text-right">${parseFloat(it.unit_price || 0).toFixed(2)}</td>
+          <td class="py-2 text-right font-mono">${it.quantity !== undefined && it.quantity !== null ? it.quantity : (it.qty || 1)}</td>
+          <td class="py-2 text-right font-mono">${parseFloat(it.unit_price || 0).toFixed(2)}</td>
           <td class="py-2 text-right font-bold">${parseFloat(it.total || 0).toFixed(2)}</td>
         `;
         tbody.appendChild(tr);

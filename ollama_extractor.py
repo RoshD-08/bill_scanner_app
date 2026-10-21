@@ -172,7 +172,7 @@ JSON Schema required:
 
 Rules:
 1. "vendor_name": Extract the brand or store name (e.g. "SPAR", "Keells", "Cargills", "Walmart"). Do NOT use an email address, website, or city name alone.
-2. Every item must have its name, numeric quantity, unit price, and line total.
+2. Every item must have its name, numeric quantity (can be decimal e.g. 0.5, 1.250 for weighed/loose goods), unit price, and line total.
 3. For each item: "total" should equal "quantity * unit_price".
 4. "total_amount": The actual net bill total to pay (items total + tax), NOT cash tendered or change given. For example, if items total is 175.00 and Cash is 200.00 and change is 25.00, total_amount is 175.00, NEVER 200.00.
 5. If the bill total is not explicitly written or unclear, compute total_amount as sum of items + tax.
@@ -231,7 +231,10 @@ BILL TEXT:
             for it in result.get("items", []):
                 if isinstance(it, dict):
                     try:
-                        q = float(it.get("quantity") or 1.0)
+                        raw_q = it.get("quantity")
+                        q = float(raw_q) if raw_q is not None else 1.0
+                        if q <= 0:
+                            q = 1.0
                     except (ValueError, TypeError):
                         q = 1.0
                     try:
