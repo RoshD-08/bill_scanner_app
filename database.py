@@ -209,13 +209,10 @@ def get_category_summary():
                     "bill_count": 0,
                     "total_amount": 0.0,
                     "latest_date": "",
-                    "currencies_used": set(),
                 }
 
             cat_data[cat]["bill_count"] += 1
             cat_data[cat]["total_amount"] += amt_lkr
-            if curr.upper() != "LKR":
-                cat_data[cat]["currencies_used"].add(curr.upper())
             if bill_date and (not cat_data[cat]["latest_date"] or bill_date > cat_data[cat]["latest_date"]):
                 cat_data[cat]["latest_date"] = bill_date
 
@@ -233,8 +230,6 @@ def get_category_summary():
                 "total_amount": tot,
                 "percentage": pct,
                 "latest_date": data["latest_date"] or "-",
-                "has_converted": len(data["currencies_used"]) > 0,
-                "currencies_used": sorted(list(data["currencies_used"])),
             })
 
         # Sort categories by total_amount descending

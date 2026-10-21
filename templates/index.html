@@ -253,15 +253,7 @@
       </div>
 
       <!-- Quick stats badge -->
-      <div class="flex flex-wrap items-center gap-3 text-xs font-semibold">
-        {% if exchange_rates %}
-        <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100/80 border border-slate-200 text-slate-600 font-mono text-[11px]" title="Exchange rates against LKR">
-          <span class="text-slate-400 font-sans font-medium">Rates:</span>
-          <span>1 USD &asymp; {{ exchange_rates[0].rate }} LKR</span>
-          <span class="text-slate-300">&middot;</span>
-          <span>1 INR &asymp; {{ exchange_rates[3].rate }} LKR</span>
-        </div>
-        {% endif %}
+      <div class="flex items-center gap-4 text-xs font-semibold">
         <div class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100">
           Total Bills: <span class="font-extrabold">{{ summary.total_count }}</span>
         </div>
@@ -297,11 +289,6 @@
             </td>
             <td class="py-3.5 px-6 text-right font-mono font-bold text-slate-900">
               {{ "{:,.2f}".format(row.total_amount) }}
-              {% if row.has_converted %}
-              <div class="text-[10px] font-normal text-brand-600">
-                (converted from {{ row.currencies_used|join(', ') }})
-              </div>
-              {% endif %}
             </td>
             <td class="py-3.5 px-6">
               <div class="flex items-center gap-2">
