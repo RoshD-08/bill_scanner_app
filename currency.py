@@ -1,6 +1,7 @@
 """
 currency.py
-Currency conversion utility to standardize all receipts and category spend to LKR (Sri Lankan Rupee).
+Currency conversion utility to standardize receipts and category spend to any preferred user currency
+(e.g., LKR, USD, EUR, GBP, INR, AUD, CAD, SGD, AED, etc.).
 Supports live exchange rates with local 12-hour file caching and built-in offline fallbacks.
 """
 
@@ -12,6 +13,28 @@ import urllib.error
 
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".currency_cache.json")
 CACHE_TTL = 12 * 3600  # 12 hours
+
+# Popular supported currencies with symbols
+SUPPORTED_CURRENCIES = [
+    {"code": "LKR", "name": "Sri Lankan Rupee", "symbol": "Rs"},
+    {"code": "USD", "name": "US Dollar", "symbol": "$"},
+    {"code": "EUR", "name": "Euro", "symbol": "€"},
+    {"code": "GBP", "name": "British Pound", "symbol": "£"},
+    {"code": "INR", "name": "Indian Rupee", "symbol": "₹"},
+    {"code": "AUD", "name": "Australian Dollar", "symbol": "A$"},
+    {"code": "CAD", "name": "Canadian Dollar", "symbol": "C$"},
+    {"code": "SGD", "name": "Singapore Dollar", "symbol": "S$"},
+    {"code": "AED", "name": "UAE Dirham", "symbol": "AED"},
+    {"code": "SAR", "name": "Saudi Riyal", "symbol": "SAR"},
+    {"code": "QAR", "name": "Qatari Riyal", "symbol": "QAR"},
+    {"code": "JPY", "name": "Japanese Yen", "symbol": "¥"},
+    {"code": "CNY", "name": "Chinese Yuan", "symbol": "¥"},
+    {"code": "MYR", "name": "Malaysian Ringgit", "symbol": "RM"},
+    {"code": "THB", "name": "Thai Baht", "symbol": "฿"},
+    {"code": "NZD", "name": "New Zealand Dollar", "symbol": "NZ$"},
+    {"code": "CHF", "name": "Swiss Franc", "symbol": "CHF"},
+    {"code": "KWD", "name": "Kuwaiti Dinar", "symbol": "KD"},
+]
 
 # Reliable default exchange rates to LKR (fallback if offline or API unreachable)
 FALLBACK_RATES_TO_LKR = {
@@ -35,6 +58,7 @@ FALLBACK_RATES_TO_LKR = {
     "KRW": 0.24,
     "HKD": 42.50,
     "KWD": 1080.00,
+    "PKR": 1.19,
 }
 
 SYMBOL_MAP = {
@@ -63,6 +87,7 @@ SYMBOL_MAP = {
     "AED": "AED",
     "SAR": "SAR",
     "QAR": "QAR",
+    "PKR": "PKR",
 }
 
 _memory_cache = {
@@ -126,16 +151,13 @@ def fetch_live_rates() -> dict:
     """
     global _memory_cache
 
-    # 1. Check in-memory cache
     if time.time() - _memory_cache["timestamp"] < CACHE_TTL and _memory_cache["is_live"]:
         return _memory_cache["rates"]
 
-    # 2. Check disk cache
     cached = _load_cached_rates()
     if cached:
         return cached
 
-    # 3. Fetch from open exchange rates endpoint (USD base)
     rates_to_lkr = dict(FALLBACK_RATES_TO_LKR)
     try:
         req = urllib.request.Request(
@@ -165,7 +187,6 @@ def fetch_live_rates() -> dict:
             _save_cached_rates(rates_to_lkr)
             return rates_to_lkr
     except Exception:
-        # Fall back to built-in rates gracefully
         _memory_cache["rates"] = rates_to_lkr
         _memory_cache["timestamp"] = time.time()
         _memory_cache["is_live"] = False
@@ -185,25 +206,48 @@ def get_rate_to_lkr(currency: str) -> float:
     return 1.0
 
 
-def convert_to_lkr(amount: float, currency: str) -> float:
-    """Convert an amount in any currency to LKR, rounded to 2 decimal places."""
+def get_rate(from_currency: str, to_currency: str) -> float:
+    """
+    Return the conversion rate from from_currency to to_currency.
+    Formula: (from_currency -> LKR) / (to_currency -> LKR).
+    """
+    f = normalize_currency(from_currency)
+    t = normalize_currency(to_currency)
+    if f == t:
+        return 1.0
+    r_from = get_rate_to_lkr(f)
+    r_to = get_rate_to_lkr(t)
+    if r_to <= 0:
+        return 1.0
+    return r_from / r_to
+
+
+def convert_currency(amount: float, from_currency: str, to_currency: str) -> float:
+    """Convert an amount from from_currency into to_currency, rounded to 2 decimal places."""
     try:
         amt = float(amount or 0.0)
     except (ValueError, TypeError):
         amt = 0.0
-    rate = get_rate_to_lkr(currency)
+    rate = get_rate(from_currency, to_currency)
     return round(amt * rate, 2)
 
 
-def get_common_exchange_rates() -> list:
-    """Return a list of popular currency rates to LKR for UI display."""
-    common_codes = ["USD", "EUR", "GBP", "INR", "AUD", "SGD", "AED"]
-    rates = fetch_live_rates()
+def convert_to_lkr(amount: float, currency: str) -> float:
+    """Legacy helper for backward compatibility."""
+    return convert_currency(amount, currency, "LKR")
+
+
+def get_common_exchange_rates(base_currency: str = "LKR") -> list:
+    """Return a list of popular currency rates relative to base_currency for UI display."""
+    base = normalize_currency(base_currency)
+    common_codes = ["USD", "EUR", "GBP", "INR", "LKR", "AUD", "SGD", "AED"]
     result = []
     for code in common_codes:
-        r = rates.get(code, FALLBACK_RATES_TO_LKR.get(code, 1.0))
+        if code == base:
+            continue
+        rate = get_rate(code, base)
         result.append({
             "currency": code,
-            "rate": f"{r:,.2f}",
+            "rate": f"{rate:,.2f}" if rate >= 1 else f"{rate:.4f}",
         })
     return result

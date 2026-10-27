@@ -1,7 +1,8 @@
 """
 database.py
 SQLite database management for the standalone AI Bill Scanner application.
-Supports user authentication, multi-tenant bill scoping, and category summaries.
+Supports user authentication, preferred currency customization, multi-tenant bill scoping,
+and live converted category summaries.
 Zero external configuration required.
 """
 
@@ -12,6 +13,7 @@ import csv
 import io
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from currency import normalize_currency, convert_currency
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bills.db")
 
@@ -48,11 +50,18 @@ def init_db():
                     username TEXT UNIQUE NOT NULL COLLATE NOCASE,
                     email TEXT UNIQUE COLLATE NOCASE,
                     password_hash TEXT NOT NULL,
+                    preferred_currency TEXT NOT NULL DEFAULT 'LKR',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
+
+            # Check and migrate preferred_currency column into users if missing
+            cursor = conn.execute("PRAGMA table_info(users);")
+            user_cols = [row["name"] for row in cursor.fetchall()]
+            if "preferred_currency" not in user_cols:
+                conn.execute("ALTER TABLE users ADD COLUMN preferred_currency TEXT NOT NULL DEFAULT 'LKR';")
 
             # 2. Bills table
             conn.execute("""
@@ -77,10 +86,10 @@ def init_db():
             conn.execute("CREATE INDEX IF NOT EXISTS idx_bills_date ON bills(bill_date);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_bills_category ON bills(category);")
 
-            # 3. Check and migrate user_id column into bills if missing
+            # Check and migrate user_id column into bills if missing
             cursor = conn.execute("PRAGMA table_info(bills);")
-            columns = [row["name"] for row in cursor.fetchall()]
-            if "user_id" not in columns:
+            bill_cols = [row["name"] for row in cursor.fetchall()]
+            if "user_id" not in bill_cols:
                 conn.execute("ALTER TABLE bills ADD COLUMN user_id INTEGER REFERENCES users(id);")
 
             conn.execute("CREATE INDEX IF NOT EXISTS idx_bills_user ON bills(user_id);")
@@ -92,14 +101,16 @@ def init_db():
 # User Authentication Functions
 # ==========================================
 
-def create_user(username, password, email=None):
+def create_user(username, password, email=None, preferred_currency="LKR"):
     """
-    Register a new user with hashed password.
+    Register a new user with hashed password and preferred currency.
     Returns (user_dict, None) on success or (None, error_str) on validation/conflict failure.
+    Every account is strictly private.
     """
     username = (username or "").strip()
     email = (email or "").strip().lower() or None
     password = (password or "").strip()
+    preferred_currency = normalize_currency(preferred_currency or "LKR")
 
     if not username or len(username) < 3:
         return None, "Username must be at least 3 characters long."
@@ -114,21 +125,13 @@ def create_user(username, password, email=None):
     try:
         with conn:
             cursor = conn.execute("""
-                INSERT INTO users (username, email, password_hash)
-                VALUES (?, ?, ?)
-            """, (username, email, pwd_hash))
+                INSERT INTO users (username, email, password_hash, preferred_currency)
+                VALUES (?, ?, ?, ?)
+            """, (username, email, pwd_hash, preferred_currency))
             user_id = cursor.lastrowid
 
-            # If this is the first registered user, claim existing unowned bills
-            count_users = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
-            if count_users == 1:
-                conn.execute(
-                    "UPDATE bills SET user_id = ? WHERE user_id IS NULL OR user_id NOT IN (SELECT id FROM users)",
-                    (user_id,)
-                )
-
             row = conn.execute(
-                "SELECT id, username, email, created_at FROM users WHERE id = ?",
+                "SELECT id, username, email, preferred_currency, created_at FROM users WHERE id = ?",
                 (user_id,)
             ).fetchone()
             return dict(row), None
@@ -156,7 +159,7 @@ def authenticate_user(username_or_email, password):
     conn = get_db()
     try:
         row = conn.execute("""
-            SELECT id, username, email, password_hash, created_at
+            SELECT id, username, email, password_hash, preferred_currency, created_at
             FROM users
             WHERE username = ? OR email = ?
         """, (val, val.lower())).fetchone()
@@ -168,6 +171,7 @@ def authenticate_user(username_or_email, password):
                 "id": row["id"],
                 "username": row["username"],
                 "email": row["email"],
+                "preferred_currency": row["preferred_currency"] or "LKR",
                 "created_at": row["created_at"],
             }
         return None
@@ -182,7 +186,7 @@ def get_user_by_id(user_id):
     conn = get_db()
     try:
         row = conn.execute("""
-            SELECT id, username, email, created_at
+            SELECT id, username, email, preferred_currency, created_at
             FROM users
             WHERE id = ?
         """, (user_id,)).fetchone()
@@ -191,28 +195,29 @@ def get_user_by_id(user_id):
         conn.close()
 
 
-def get_user_by_username(username):
-    """Retrieve user record by username."""
-    if not username:
-        return None
+def update_user_currency(user_id, currency):
+    """Update user's preferred currency."""
+    if not user_id:
+        return False
+    clean_curr = normalize_currency(currency)
     conn = get_db()
     try:
-        row = conn.execute("""
-            SELECT id, username, email, created_at
-            FROM users
-            WHERE username = ?
-        """, (username.strip(),)).fetchone()
-        return dict(row) if row else None
+        with conn:
+            conn.execute("UPDATE users SET preferred_currency = ? WHERE id = ?", (clean_curr, user_id))
+        return True
     finally:
         conn.close()
 
 
 # ==========================================
-# Bill Management Functions (User-Scoped)
+# Bill Management Functions (Strictly User-Scoped)
 # ==========================================
 
-def save_bill(data, user_id=None):
+def save_bill(data, user_id):
     """Insert a new bill record into the database associated with user_id."""
+    if not user_id:
+        raise ValueError("Cannot save bill without a valid user account.")
+
     conn = get_db()
     try:
         items = data.get("items", [])
@@ -248,16 +253,20 @@ def save_bill(data, user_id=None):
         conn.close()
 
 
-def get_all_bills(user_id=None, category=None, start_date=None, end_date=None, query=None):
-    """Retrieve bills for a specific user with optional filters."""
+def get_all_bills(user_id, target_currency="LKR", category=None, start_date=None, end_date=None, query=None):
+    """
+    Retrieve bills strictly for the specified user_id.
+    Each bill includes total_amount_converted in the user's preferred target_currency.
+    """
+    if not user_id:
+        return []
+
+    target_curr = normalize_currency(target_currency or "LKR")
+
     conn = get_db()
     try:
-        sql = "SELECT * FROM bills WHERE 1=1"
-        params = []
-
-        if user_id is not None:
-            sql += " AND user_id = ?"
-            params.append(user_id)
+        sql = "SELECT * FROM bills WHERE user_id = ?"
+        params = [user_id]
 
         if category and category.strip():
             sql += " AND category = ?"
@@ -280,7 +289,6 @@ def get_all_bills(user_id=None, category=None, start_date=None, end_date=None, q
 
         rows = conn.execute(sql, params).fetchall()
         bills = []
-        from currency import convert_to_lkr
         for r in rows:
             b = dict(r)
             try:
@@ -289,21 +297,28 @@ def get_all_bills(user_id=None, category=None, start_date=None, end_date=None, q
                 parsed = []
             b["line_items"] = parsed
             b["items"] = parsed
-            b["total_amount_lkr"] = convert_to_lkr(b.get("total_amount", 0.0), b.get("currency", "LKR"))
+            b["total_amount_converted"] = convert_currency(
+                b.get("total_amount", 0.0),
+                b.get("currency", "LKR"),
+                target_curr
+            )
+            b["target_currency"] = target_curr
             bills.append(b)
         return bills
     finally:
         conn.close()
 
 
-def get_bill_by_id(bill_id, user_id=None):
-    """Fetch single bill details by ID, validating user ownership if user_id given."""
+def get_bill_by_id(bill_id, user_id):
+    """Fetch single bill details by ID, strictly enforcing user ownership."""
+    if not user_id:
+        return None
     conn = get_db()
     try:
-        if user_id is not None:
-            row = conn.execute("SELECT * FROM bills WHERE id = ? AND user_id = ?", (bill_id, user_id)).fetchone()
-        else:
-            row = conn.execute("SELECT * FROM bills WHERE id = ?", (bill_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM bills WHERE id = ? AND user_id = ?",
+            (bill_id, user_id)
+        ).fetchone()
         if not row:
             return None
         b = dict(row)
@@ -318,61 +333,58 @@ def get_bill_by_id(bill_id, user_id=None):
         conn.close()
 
 
-def delete_bill(bill_id, user_id=None):
-    """Delete a bill by ID (restricted to user_id if given) and return its image_path."""
+def delete_bill(bill_id, user_id):
+    """Delete a bill by ID strictly owned by user_id and return its image_path."""
+    if not user_id:
+        return None
     conn = get_db()
     try:
-        if user_id is not None:
-            row = conn.execute(
-                "SELECT image_path FROM bills WHERE id = ? AND user_id = ?",
-                (bill_id, user_id)
-            ).fetchone()
-        else:
-            row = conn.execute("SELECT image_path FROM bills WHERE id = ?", (bill_id,)).fetchone()
-
+        row = conn.execute(
+            "SELECT image_path FROM bills WHERE id = ? AND user_id = ?",
+            (bill_id, user_id)
+        ).fetchone()
         if not row:
             return None
         image_path = row["image_path"]
         with conn:
-            if user_id is not None:
-                conn.execute("DELETE FROM bills WHERE id = ? AND user_id = ?", (bill_id, user_id))
-            else:
-                conn.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
+            conn.execute("DELETE FROM bills WHERE id = ? AND user_id = ?", (bill_id, user_id))
         return image_path
     finally:
         conn.close()
 
 
-def get_category_summary(user_id=None):
+def get_category_summary(user_id, target_currency="LKR"):
     """
-    Aggregate statistics grouped by category for a specific user,
-    with all bill totals converted to LKR.
+    Aggregate category statistics strictly for the specified user_id,
+    with all bills converted into the user's preferred target_currency.
     """
-    from currency import convert_to_lkr
+    target_curr = normalize_currency(target_currency or "LKR")
+
+    if not user_id:
+        return {
+            "categories": [],
+            "grand_total": 0.0,
+            "total_count": 0,
+            "target_currency": target_curr,
+        }
 
     conn = get_db()
     try:
-        if user_id is not None:
-            rows = conn.execute("""
-                SELECT id, category, total_amount, currency, bill_date
-                FROM bills
-                WHERE user_id = ?
-            """, (user_id,)).fetchall()
-        else:
-            rows = conn.execute("""
-                SELECT id, category, total_amount, currency, bill_date
-                FROM bills
-            """).fetchall()
+        rows = conn.execute("""
+            SELECT id, category, total_amount, currency, bill_date
+            FROM bills
+            WHERE user_id = ?
+        """, (user_id,)).fetchall()
 
         cat_data = {}
-        grand_total_lkr = 0.0
+        grand_total_conv = 0.0
         total_count = len(rows)
 
         for r in rows:
             cat = r["category"] or "Other"
             raw_amt = float(r["total_amount"] or 0.0)
             curr = r["currency"] or "LKR"
-            amt_lkr = convert_to_lkr(raw_amt, curr)
+            amt_conv = convert_currency(raw_amt, curr, target_curr)
             bill_date = r["bill_date"] or ""
 
             if cat not in cat_data:
@@ -384,18 +396,18 @@ def get_category_summary(user_id=None):
                 }
 
             cat_data[cat]["bill_count"] += 1
-            cat_data[cat]["total_amount"] += amt_lkr
+            cat_data[cat]["total_amount"] += amt_conv
             if bill_date and (not cat_data[cat]["latest_date"] or bill_date > cat_data[cat]["latest_date"]):
                 cat_data[cat]["latest_date"] = bill_date
 
-            grand_total_lkr += amt_lkr
+            grand_total_conv += amt_conv
 
-        grand_total_lkr = round(grand_total_lkr, 2)
+        grand_total_conv = round(grand_total_conv, 2)
 
         summary = []
         for cat, data in cat_data.items():
             tot = round(data["total_amount"], 2)
-            pct = round((tot / grand_total_lkr * 100.0), 1) if grand_total_lkr > 0 else 0.0
+            pct = round((tot / grand_total_conv * 100.0), 1) if grand_total_conv > 0 else 0.0
             summary.append({
                 "category": cat,
                 "bill_count": data["bill_count"],
@@ -409,16 +421,18 @@ def get_category_summary(user_id=None):
 
         return {
             "categories": summary,
-            "grand_total": grand_total_lkr,
+            "grand_total": grand_total_conv,
             "total_count": total_count,
+            "target_currency": target_curr,
         }
     finally:
         conn.close()
 
 
-def export_bills_to_csv(user_id=None):
-    """Generate a clean CSV string of bills for a user including LKR converted amounts."""
-    bills = get_all_bills(user_id=user_id)
+def export_bills_to_csv(user_id, target_currency="LKR"):
+    """Generate a clean CSV string of bills for a user including converted amounts in target_currency."""
+    target_curr = normalize_currency(target_currency or "LKR")
+    bills = get_all_bills(user_id=user_id, target_currency=target_curr)
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -431,7 +445,7 @@ def export_bills_to_csv(user_id=None):
         "Category",
         "Total Amount",
         "Currency",
-        "Total Amount (LKR)",
+        f"Total Amount ({target_curr})",
         "Tax Amount",
         "Payment Method",
         "Items Summary",
@@ -457,7 +471,7 @@ def export_bills_to_csv(user_id=None):
             b["category"],
             f"{b['total_amount']:.2f}",
             b["currency"],
-            f"{b.get('total_amount_lkr', b['total_amount']):.2f}",
+            f"{b.get('total_amount_converted', b['total_amount']):.2f}",
             f"{b['tax_amount']:.2f}",
             b["payment_method"] or "",
             items_summary,

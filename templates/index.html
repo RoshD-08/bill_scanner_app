@@ -163,7 +163,7 @@
             <!-- Currency -->
             <div>
               <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Currency</label>
-              <input type="text" name="currency" id="formCurrency" value="LKR"
+              <input type="text" name="currency" id="formCurrency" value="{{ target_currency }}"
                      class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm font-mono text-slate-800 shadow-sm">
             </div>
           </div>
@@ -246,19 +246,32 @@
         <div class="flex items-center gap-2">
           <h2 class="text-lg font-bold text-slate-900">Category Spending Summary</h2>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            LKR Standardized
+            {{ target_currency }} Standardized
           </span>
         </div>
-        <p class="text-xs text-slate-500 mt-0.5">Aggregated bill totals and percentage share per category &middot; all amounts converted to LKR</p>
+        <p class="text-xs text-slate-500 mt-0.5">Aggregated bill totals and percentage share per category &middot; all amounts converted to <span class="font-semibold text-slate-700">{{ target_currency }}</span></p>
       </div>
 
-      <!-- Quick stats badge -->
-      <div class="flex items-center gap-4 text-xs font-semibold">
+      <!-- Quick stats badge & Currency Switcher -->
+      <div class="flex flex-wrap items-center gap-3 text-xs font-semibold">
+        <!-- Currency Switcher -->
+        <form action="{{ url_for('api_update_currency') }}" method="POST" class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-xl" title="Change your preferred currency">
+          <label for="dashCurrencySelect" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Currency:</label>
+          <select id="dashCurrencySelect" name="currency" onchange="this.form.submit()"
+                  class="text-xs font-bold font-mono px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-800 focus:ring-1 focus:ring-brand-500 shadow-xs cursor-pointer">
+            {% for c in supported_currencies %}
+            <option value="{{ c.code }}" {% if target_currency == c.code %}selected{% endif %}>
+              {{ c.code }} ({{ c.symbol }})
+            </option>
+            {% endfor %}
+          </select>
+        </form>
+
         <div class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100">
           Total Bills: <span class="font-extrabold">{{ summary.total_count }}</span>
         </div>
         <div class="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-100">
-          Total Spent: <span class="font-extrabold">LKR {{ "{:,.2f}".format(summary.grand_total) }}</span>
+          Total Spent: <span class="font-extrabold">{{ target_currency }} {{ "{:,.2f}".format(summary.grand_total) }}</span>
         </div>
       </div>
     </div>
@@ -270,7 +283,7 @@
           <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <th class="py-3.5 px-6">Category</th>
             <th class="py-3.5 px-4 text-center"># of Bills</th>
-            <th class="py-3.5 px-6 text-right">Total Amount (LKR)</th>
+            <th class="py-3.5 px-6 text-right">Total Amount ({{ target_currency }})</th>
             <th class="py-3.5 px-6 w-48">Share of Spend</th>
             <th class="py-3.5 px-6 text-right">Latest Bill Date</th>
           </tr>
@@ -309,7 +322,7 @@
             <td class="py-4 px-6 uppercase tracking-wider text-xs">Grand Total</td>
             <td class="py-4 px-4 text-center font-mono">{{ summary.total_count }}</td>
             <td class="py-4 px-6 text-right font-mono text-base text-brand-700">
-              <span class="text-xs font-normal text-slate-400 mr-1">LKR</span>{{ "{:,.2f}".format(summary.grand_total) }}
+              <span class="text-xs font-normal text-slate-400 mr-1">{{ target_currency }}</span>{{ "{:,.2f}".format(summary.grand_total) }}
             </td>
             <td class="py-4 px-6 text-xs text-slate-500">100% Total Volume</td>
             <td class="py-4 px-6"></td>
@@ -421,9 +434,9 @@
             </td>
             <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
               <div><span class="text-xs font-normal text-slate-400 mr-1">{{ b.currency }}</span>{{ "{:,.2f}".format(b.total_amount) }}</div>
-              {% if b.currency != 'LKR' and b.total_amount_lkr %}
+              {% if b.currency != target_currency and b.total_amount_converted is defined %}
               <div class="text-[11px] font-semibold text-brand-600">
-                &asymp; LKR {{ "{:,.2f}".format(b.total_amount_lkr) }}
+                &asymp; {{ target_currency }} {{ "{:,.2f}".format(b.total_amount_converted) }}
               </div>
               {% endif %}
             </td>
@@ -575,7 +588,7 @@
       document.getElementById('formNumber').value = data.bill_number || '';
       document.getElementById('formCategory').value = data.category || 'Other';
       document.getElementById('formPayment').value = data.payment_method || 'Cash';
-      document.getElementById('formCurrency').value = data.currency || 'LKR';
+      document.getElementById('formCurrency').value = data.currency || '{{ target_currency }}';
       document.getElementById('formTax').value = parseFloat(data.tax_amount || 0).toFixed(2);
       document.getElementById('formTotal').value = parseFloat(data.total_amount || 0).toFixed(2);
 
@@ -595,7 +608,7 @@
         addItemRow('', 1, 0, 0);
       }
 
-      updateLkrEquivalent();
+      updateTargetEquivalent();
       reviewSection.classList.remove('hidden');
       reviewSection.scrollIntoView({ behavior: 'smooth' });
     })
@@ -661,42 +674,45 @@
     if (sum > 0) {
       document.getElementById('formTotal').value = (sum + tax).toFixed(2);
     }
-    updateLkrEquivalent();
+    updateTargetEquivalent();
   }
 
   // Currency conversion preview in review form
+  const userTargetCurrency = '{{ target_currency }}';
   let activeRates = { 'LKR': 1.0, 'USD': 331.60, 'EUR': 355.00, 'GBP': 425.00, 'INR': 3.49 };
   fetch("{{ url_for('api_currency_rates') }}")
     .then(r => r.json())
     .then(data => {
       if (data && data.rates) {
         activeRates = data.rates;
-        updateLkrEquivalent();
+        updateTargetEquivalent();
       }
     })
     .catch(() => {});
 
-  function updateLkrEquivalent() {
+  function updateTargetEquivalent() {
     const currInput = document.getElementById('formCurrency');
     const totalInput = document.getElementById('formTotal');
     const badge = document.getElementById('formLkrEquivalent');
     if (!currInput || !totalInput || !badge) return;
 
-    const curr = (currInput.value || 'LKR').trim().toUpperCase();
+    const curr = (currInput.value || userTargetCurrency).trim().toUpperCase();
     const total = parseFloat(totalInput.value) || 0;
 
-    if (curr !== 'LKR' && total > 0) {
-      const rate = activeRates[curr] || 1.0;
-      const lkrVal = (total * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      badge.textContent = `≈ LKR ${lkrVal}`;
+    if (curr !== userTargetCurrency && total > 0) {
+      const rateFrom = activeRates[curr] || 1.0;
+      const rateTo = activeRates[userTargetCurrency] || 1.0;
+      const rate = rateFrom / rateTo;
+      const convVal = (total * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      badge.textContent = `≈ ${userTargetCurrency} ${convVal}`;
       badge.classList.remove('hidden');
     } else {
       badge.classList.add('hidden');
     }
   }
 
-  document.getElementById('formCurrency').addEventListener('input', updateLkrEquivalent);
-  document.getElementById('formTotal').addEventListener('input', updateLkrEquivalent);
+  document.getElementById('formCurrency').addEventListener('input', updateTargetEquivalent);
+  document.getElementById('formTotal').addEventListener('input', updateTargetEquivalent);
   document.getElementById('formTax').addEventListener('input', recalcGrandTotal);
   document.getElementById('addItemRowBtn').addEventListener('click', () => addItemRow('', 1, 0, 0));
 

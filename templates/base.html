@@ -75,6 +75,9 @@
               {{ current_user.username[0] }}
             </span>
             <span class="max-w-[120px] truncate">{{ current_user.username }}</span>
+            <span class="px-1.5 py-0.5 rounded-md bg-white text-brand-700 font-mono text-[10px] font-extrabold border border-slate-200" title="Your preferred currency">
+              {{ current_user.preferred_currency }}
+            </span>
           </div>
           <a href="{{ url_for('logout') }}"
              title="Sign Out"

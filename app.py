@@ -1,7 +1,8 @@
 """
 app.py
 Standalone AI Bill Scanner & Categorizer Web Application.
-Supports multi-user authentication, login, registration, and user-scoped bill tracking.
+Supports private user accounts, custom preferred currencies, multi-currency conversion,
+and strictly user-isolated dashboards.
 """
 
 import os
@@ -16,10 +17,13 @@ from dotenv import load_dotenv
 
 from database import (
     init_db, create_user, authenticate_user, get_user_by_id,
-    save_bill, get_all_bills, delete_bill, get_category_summary,
-    export_bills_to_csv, CATEGORIES
+    update_user_currency, save_bill, get_all_bills, delete_bill,
+    get_category_summary, export_bills_to_csv, CATEGORIES
 )
-from currency import get_common_exchange_rates, fetch_live_rates
+from currency import (
+    SUPPORTED_CURRENCIES, get_common_exchange_rates,
+    fetch_live_rates, get_rate, convert_currency, normalize_currency
+)
 from indra_extractor import extract_bill_data_local
 from ai_extractor import extract_bill_data
 from ollama_extractor import (
@@ -69,15 +73,17 @@ def login_required(f):
 
 @app.context_processor
 def inject_user():
-    """Make current_user available to all Jinja templates."""
+    """Make current_user and supported currencies available to all Jinja templates."""
     user_id = session.get("user_id")
     current_user = None
     if user_id:
         current_user = get_user_by_id(user_id)
         if not current_user:
-            # Stale session cleanup
             session.clear()
-    return dict(current_user=current_user)
+    return dict(
+        current_user=current_user,
+        supported_currencies=SUPPORTED_CURRENCIES
+    )
 
 
 # ==========================================
@@ -104,6 +110,7 @@ def login():
         if user:
             session["user_id"] = user["id"]
             session["username"] = user["username"]
+            session["preferred_currency"] = user.get("preferred_currency", "LKR")
             flash(f"Welcome back, {user['username']}!", "success")
             return redirect(next_url)
         else:
@@ -115,7 +122,7 @@ def login():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    """Create a new user account."""
+    """Create a new private user account with preferred currency."""
     if "user_id" in session:
         return redirect(url_for("index"))
 
@@ -124,31 +131,58 @@ def register():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
         confirm_password = request.form.get("confirm_password", "").strip()
+        preferred_currency = request.form.get("preferred_currency", "LKR").strip().upper()
 
         if not username or not password:
             flash("Username and password are required.", "error")
-            return render_template("register.html", username=username, email=email)
+            return render_template(
+                "register.html",
+                username=username,
+                email=email,
+                preferred_currency=preferred_currency
+            )
 
         if password != confirm_password:
             flash("Passwords do not match. Please re-enter.", "error")
-            return render_template("register.html", username=username, email=email)
+            return render_template(
+                "register.html",
+                username=username,
+                email=email,
+                preferred_currency=preferred_currency
+            )
 
         if len(password) < 6:
             flash("Password must be at least 6 characters long.", "error")
-            return render_template("register.html", username=username, email=email)
+            return render_template(
+                "register.html",
+                username=username,
+                email=email,
+                preferred_currency=preferred_currency
+            )
 
-        user, error = create_user(username, password, email=email if email else None)
+        user, error = create_user(
+            username=username,
+            password=password,
+            email=email if email else None,
+            preferred_currency=preferred_currency
+        )
         if error:
             flash(error, "error")
-            return render_template("register.html", username=username, email=email)
+            return render_template(
+                "register.html",
+                username=username,
+                email=email,
+                preferred_currency=preferred_currency
+            )
 
-        # Log new user in automatically
+        # Log new user in automatically with their chosen currency
         session["user_id"] = user["id"]
         session["username"] = user["username"]
-        flash(f"Account created successfully! Welcome, {user['username']}.", "success")
+        session["preferred_currency"] = user.get("preferred_currency", "LKR")
+        flash(f"Account created successfully! Your dashboard currency is set to {user['preferred_currency']}.", "success")
         return redirect(url_for("index"))
 
-    return render_template("register.html")
+    return render_template("register.html", preferred_currency="LKR")
 
 
 @app.route("/logout", methods=["GET", "POST"])
@@ -159,34 +193,66 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/api/user/currency", methods=["POST"])
+@login_required
+def api_update_currency():
+    """Allow user to update their preferred dashboard currency on the fly."""
+    user_id = session.get("user_id")
+    if request.is_json and request.json:
+        new_curr = request.json.get("currency")
+    else:
+        new_curr = request.form.get("currency")
+
+    if not new_curr:
+        return jsonify({"error": "No currency specified."}), 400
+
+    clean_curr = normalize_currency(new_curr)
+    update_user_currency(user_id, clean_curr)
+    session["preferred_currency"] = clean_curr
+    flash(f"Dashboard currency updated to {clean_curr}.", "success")
+    if request.is_json:
+        return jsonify({"success": True, "currency": clean_curr})
+    return redirect(url_for("index"))
+
+
 # ==========================================
-# Main Dashboard & Bill Routes
+# Main Dashboard & Bill Routes (Strictly Scoped)
 # ==========================================
 
 @app.route("/")
 @login_required
 def index():
-    """Main dashboard displaying upload zone, category summary, and user's bills."""
+    """Main dashboard displaying upload zone, category summary, and user's private bills in their preferred currency."""
     user_id = session.get("user_id")
-    summary = get_category_summary(user_id=user_id)
-    bills = get_all_bills(user_id=user_id)
-    rates = get_common_exchange_rates()
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+
+    summary = get_category_summary(user_id=user_id, target_currency=target_curr)
+    bills = get_all_bills(user_id=user_id, target_currency=target_curr)
+    rates = get_common_exchange_rates(base_currency=target_curr)
+
     return render_template(
         "index.html",
         summary=summary,
         bills=bills,
         categories=CATEGORIES,
-        exchange_rates=rates
+        exchange_rates=rates,
+        target_currency=target_curr
     )
 
 
 @app.route("/api/currency/rates")
 def api_currency_rates():
-    """Return current exchange rates relative to LKR."""
+    """Return current exchange rates relative to base currency."""
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id) if user_id else None
+    default_base = user.get("preferred_currency", "LKR") if user else "LKR"
+    base = request.args.get("base", default_base)
+
     return jsonify({
-        "base": "LKR",
+        "base": base,
         "rates": fetch_live_rates(),
-        "common": get_common_exchange_rates()
+        "common": get_common_exchange_rates(base_currency=base)
     })
 
 
@@ -229,6 +295,12 @@ def upload():
 
     extracted["image_path"] = unique_name
 
+    # If currency not detected, default to user's preferred currency
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id) if user_id else None
+    if user and not extracted.get("currency"):
+        extracted["currency"] = user.get("preferred_currency", "LKR")
+
     return jsonify(extracted)
 
 
@@ -267,6 +339,10 @@ def save():
     except (ValueError, TypeError):
         tax_amount = 0.0
 
+    user = get_user_by_id(user_id)
+    default_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+    raw_curr = request.form.get("currency", default_curr).strip()
+
     data = {
         "vendor_name": request.form.get("vendor_name", "").strip(),
         "bill_date": request.form.get("bill_date", "").strip(),
@@ -274,7 +350,7 @@ def save():
         "category": request.form.get("category", "Other").strip(),
         "total_amount": total_amount,
         "tax_amount": tax_amount,
-        "currency": request.form.get("currency", "LKR").strip(),
+        "currency": normalize_currency(raw_curr),
         "payment_method": request.form.get("payment_method", "").strip(),
         "items": items,
         "image_path": image_path,
@@ -284,7 +360,7 @@ def save():
 
     try:
         save_bill(data, user_id=user_id)
-        flash(f"Bill from '{data['vendor_name'] or 'Unknown'}' saved successfully!", "success")
+        flash(f"Bill from '{data['vendor_name'] or 'Unknown'}' saved to your private collection!", "success")
     except Exception as e:
         flash(f"Failed to save bill: {str(e)}", "error")
 
@@ -314,22 +390,26 @@ def delete(bill_id):
 @app.route("/export/csv")
 @login_required
 def export_csv():
-    """Export current user's bill records to CSV format."""
+    """Export current user's bill records to CSV format with their preferred currency."""
     user_id = session.get("user_id")
-    csv_data = export_bills_to_csv(user_id=user_id)
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+    csv_data = export_bills_to_csv(user_id=user_id, target_currency=target_curr)
     return Response(
         csv_data,
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=bills_summary.csv"}
+        headers={"Content-Disposition": f"attachment; filename=bills_summary_{target_curr.lower()}.csv"}
     )
 
 
 @app.route("/api/summary")
 @login_required
 def api_summary():
-    """Return JSON category breakdown for current user."""
+    """Return JSON category breakdown in current user's preferred currency."""
     user_id = session.get("user_id")
-    return jsonify(get_category_summary(user_id=user_id))
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+    return jsonify(get_category_summary(user_id=user_id, target_currency=target_curr))
 
 
 if __name__ == "__main__":
