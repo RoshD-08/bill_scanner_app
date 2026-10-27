@@ -7,31 +7,31 @@
   <!-- ========================================== -->
   <!-- 1. Header & Period Navigation Controls     -->
   <!-- ========================================== -->
-  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 no-print">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8 no-print transition-colors">
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
       <div>
         <div class="flex items-center gap-2">
-          <span class="p-2 rounded-xl bg-indigo-50 text-brand-600 font-bold">
+          <span class="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-brand-600 dark:text-brand-400 font-bold">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
             </svg>
           </span>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Monthly Financial Report
           </h1>
         </div>
-        <p class="text-slate-500 text-sm mt-1.5">
-          Detailed income, expenditure, category breakdown, and net savings report for <span class="font-bold text-slate-800">{{ report.period_label }}</span>.
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1.5">
+          Detailed income, expenditure, category breakdown, and net savings report for <span class="font-bold text-slate-800 dark:text-slate-200">{{ report.period_label }}</span>.
         </p>
       </div>
 
       <!-- Actions & Month Selector -->
       <div class="flex flex-wrap items-center gap-2.5">
         <!-- Month Navigator -->
-        <div class="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 shadow-2xs">
+        <div class="inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800 p-1 shadow-2xs">
           <a href="{{ url_for('reports', month=report.prev_month) }}"
              title="Previous Month"
-             class="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-2xs transition">
+             class="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 hover:shadow-2xs transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -39,9 +39,9 @@
 
           <select id="monthSelector"
                   onchange="location.href='{{ url_for('reports') }}?month=' + this.value"
-                  class="bg-transparent text-xs sm:text-sm font-bold text-slate-800 px-2.5 py-1 focus:outline-hidden cursor-pointer">
+                  class="bg-transparent text-xs sm:text-sm font-bold text-slate-800 dark:text-white px-2.5 py-1 focus:outline-hidden cursor-pointer">
             {% for m in available_months %}
-            <option value="{{ m.value }}" {% if m.value == selected_month %}selected{% endif %}>
+            <option value="{{ m.value }}" {% if m.value == selected_month %}selected{% endif %} class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">
               {{ m.label }}
             </option>
             {% endfor %}
@@ -49,7 +49,7 @@
 
           <a href="{{ url_for('reports', month=report.next_month) }}"
              title="Next Month"
-             class="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-2xs transition">
+             class="p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 hover:shadow-2xs transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
@@ -59,7 +59,7 @@
         <!-- Add Income Button -->
         <button type="button"
                 onclick="openIncomeModal()"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs shadow-emerald-600/25">
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs shadow-emerald-600/25 cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -68,7 +68,7 @@
 
         <!-- Export CSV Button -->
         <a href="{{ url_for('export_monthly_report_csv', month=selected_month) }}"
-           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition shadow-2xs">
+           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-bold transition shadow-2xs">
           <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
@@ -78,7 +78,7 @@
         <!-- Print / PDF Button -->
         <button type="button"
                 onclick="window.print()"
-                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition shadow-2xs">
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer">
           <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
           </svg>
@@ -86,7 +86,7 @@
         </button>
 
         <!-- Preferred Currency Badge -->
-        <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-xs font-extrabold font-mono" title="Values standardized in your preferred currency">
+        <span class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-extrabold font-mono" title="Values standardized in your preferred currency">
           {{ target_currency }} Standardized
         </span>
       </div>
@@ -110,26 +110,26 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
     <!-- Card 1: Total Monthly Income -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs relative overflow-hidden transition-colors">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Income</span>
-        <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Income</span>
+        <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
           </svg>
         </span>
       </div>
       <div class="mt-3">
-        <div class="text-2xl font-black text-slate-900 font-mono tracking-tight">
+        <div class="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
           {{ target_currency }} {{ "%.2f"|format(report.total_income) }}
         </div>
-        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span>{{ report.incomes|length }} sources recorded</span>
           {% if report.inc_change_pct is not none %}
             {% if report.inc_change_pct >= 0 %}
-              <span class="text-emerald-600 font-bold">↑ {{ report.inc_change_pct }}% vs last mo</span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-bold">↑ {{ report.inc_change_pct }}% vs last mo</span>
             {% else %}
-              <span class="text-rose-600 font-bold">↓ {{ report.inc_change_pct|abs }}% vs last mo</span>
+              <span class="text-rose-600 dark:text-rose-400 font-bold">↓ {{ report.inc_change_pct|abs }}% vs last mo</span>
             {% endif %}
           {% endif %}
         </div>
@@ -138,26 +138,26 @@
     </div>
 
     <!-- Card 2: Total Monthly Expenditure -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs relative overflow-hidden transition-colors">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Expenditure</span>
-        <span class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Expenditure</span>
+        <span class="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
           </svg>
         </span>
       </div>
       <div class="mt-3">
-        <div class="text-2xl font-black text-slate-900 font-mono tracking-tight">
+        <div class="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
           {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
         </div>
-        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span>{{ report.bills|length }} bills scanned</span>
           {% if report.exp_change_pct is not none %}
             {% if report.exp_change_pct <= 0 %}
-              <span class="text-emerald-600 font-bold">↓ {{ report.exp_change_pct|abs }}% vs last mo</span>
+              <span class="text-emerald-600 dark:text-emerald-400 font-bold">↓ {{ report.exp_change_pct|abs }}% vs last mo</span>
             {% else %}
-              <span class="text-rose-600 font-bold">↑ {{ report.exp_change_pct }}% vs last mo</span>
+              <span class="text-rose-600 dark:text-rose-400 font-bold">↑ {{ report.exp_change_pct }}% vs last mo</span>
             {% endif %}
           {% endif %}
         </div>
@@ -166,10 +166,10 @@
     </div>
 
     <!-- Card 3: Net Savings / Cash Flow -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden {% if report.net_savings >= 0 %}bg-gradient-to-br from-white to-emerald-50/30{% else %}bg-gradient-to-br from-white to-rose-50/30{% endif %}">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs relative overflow-hidden {% if report.net_savings >= 0 %}bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20{% else %}bg-gradient-to-br from-white to-rose-50/30 dark:from-slate-900 dark:to-rose-950/20{% endif %} transition-colors">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Net Cash Flow</span>
-        <span class="w-8 h-8 rounded-xl {% if report.net_savings >= 0 %}bg-emerald-100/70 text-emerald-700{% else %}bg-rose-100/70 text-rose-700{% endif %} flex items-center justify-center font-bold">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Net Cash Flow</span>
+        <span class="w-8 h-8 rounded-xl {% if report.net_savings >= 0 %}bg-emerald-100/70 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100/70 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300{% endif %} flex items-center justify-center font-bold">
           {% if report.net_savings >= 0 %}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -182,11 +182,11 @@
         </span>
       </div>
       <div class="mt-3">
-        <div class="text-2xl font-black font-mono tracking-tight {% if report.net_savings >= 0 %}text-emerald-700{% else %}text-rose-600{% endif %}">
+        <div class="text-2xl font-black font-mono tracking-tight {% if report.net_savings >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
           {% if report.net_savings >= 0 %}+{% endif %}{{ target_currency }} {{ "%.2f"|format(report.net_savings) }}
         </div>
-        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
-          <span class="font-bold {% if report.net_savings >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <span class="font-bold {% if report.net_savings >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
             Savings Rate: {{ report.savings_rate }}%
           </span>
           <span>&middot;</span>
@@ -197,22 +197,22 @@
     </div>
 
     <!-- Card 4: Daily Average Spend & Top Category -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs relative overflow-hidden transition-colors">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Daily Average Spend</span>
-        <span class="w-8 h-8 rounded-xl bg-indigo-50 text-brand-600 flex items-center justify-center font-bold">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Daily Average Spend</span>
+        <span class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
         </span>
       </div>
       <div class="mt-3">
-        <div class="text-2xl font-black text-slate-900 font-mono tracking-tight">
+        <div class="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
           {{ target_currency }} {{ "%.2f"|format(report.daily_avg_spend) }}
         </div>
-        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 truncate">
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400 truncate">
           {% if report.top_expense_category %}
-            <span>Top: <strong class="text-slate-800">{{ report.top_expense_category.category }}</strong> ({{ report.top_expense_category.percentage }}%)</span>
+            <span>Top: <strong class="text-slate-800 dark:text-slate-200">{{ report.top_expense_category.category }}</strong> ({{ report.top_expense_category.percentage }}%)</span>
           {% else %}
             <span>No expenses this month</span>
           {% endif %}
@@ -229,18 +229,18 @@
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
     <!-- Left: Expenditure Categories (Interactive Pie / Donut Chart) -->
-    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between">
+    <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between transition-colors">
       <div>
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-brand-600"></span>
-            <h2 class="text-base font-extrabold text-slate-900">Expenditure by Category</h2>
+            <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Expenditure by Category</h2>
           </div>
-          <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold font-mono">
+          <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent dark:border-slate-700 font-bold font-mono">
             {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
           </span>
         </div>
-        <p class="text-xs text-slate-500 mb-6">
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
           Interactive distribution of your spending across categories. Hover over slices for details.
         </p>
 
@@ -255,57 +255,57 @@
         <!-- Category Legend with Amounts & Progress Bars -->
         <div class="space-y-3 mt-6 max-h-60 overflow-y-auto pr-1">
           {% for cat in report.expense_categories %}
-          <div class="p-2.5 rounded-xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100">
+          <div class="p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
             <div class="flex items-center justify-between text-xs mb-1">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ cat.color }};"></span>
-                <span class="font-bold text-slate-800 truncate">{{ cat.category }}</span>
-                <span class="text-slate-400">({{ cat.bill_count }})</span>
+                <span class="font-bold text-slate-800 dark:text-slate-200 truncate">{{ cat.category }}</span>
+                <span class="text-slate-400 dark:text-slate-500">({{ cat.bill_count }})</span>
               </div>
               <div class="text-right flex-shrink-0 font-mono">
-                <span class="font-extrabold text-slate-900">{{ target_currency }} {{ "%.2f"|format(cat.total_amount) }}</span>
-                <span class="text-slate-500 ml-1">({{ cat.percentage }}%)</span>
+                <span class="font-extrabold text-slate-900 dark:text-white">{{ target_currency }} {{ "%.2f"|format(cat.total_amount) }}</span>
+                <span class="text-slate-500 dark:text-slate-400 ml-1">({{ cat.percentage }}%)</span>
               </div>
             </div>
             <!-- Visual Bar -->
-            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div class="h-full rounded-full" style="width: {{ cat.percentage }}%; background-color: {{ cat.color }};"></div>
             </div>
           </div>
           {% endfor %}
         </div>
         {% else %}
-        <div class="py-16 text-center text-slate-400">
-          <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="py-16 text-center text-slate-400 dark:text-slate-500">
+          <svg class="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
           </svg>
-          <p class="font-semibold text-slate-600 text-sm">No expenses for {{ report.period_label }}</p>
-          <p class="text-xs text-slate-400 mt-1">Upload or scan receipts to see expenditure pie charts.</p>
+          <p class="font-semibold text-slate-600 dark:text-slate-300 text-sm">No expenses for {{ report.period_label }}</p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Upload or scan receipts to see expenditure pie charts.</p>
         </div>
         {% endif %}
       </div>
     </div>
 
     <!-- Right: Cash Flow & Daily Spend Activity -->
-    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between">
+    <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between transition-colors">
       <div>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <h2 class="text-base font-extrabold text-slate-900">Cash Flow & Daily Activity</h2>
+            <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Cash Flow &amp; Daily Activity</h2>
           </div>
           <!-- Chart Mode Switcher -->
-          <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-bold text-slate-600 no-print">
-            <button type="button" id="btnChartCashFlow" onclick="switchRightChart('cashflow')" class="px-3 py-1 rounded-lg bg-white text-slate-900 shadow-2xs">
+          <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs font-bold text-slate-600 dark:text-slate-300 no-print border border-transparent dark:border-slate-700">
+            <button type="button" id="btnChartCashFlow" onclick="switchRightChart('cashflow')" class="px-3 py-1 rounded-lg bg-white text-slate-900 dark:bg-slate-700 dark:text-white shadow-2xs cursor-pointer">
               Income vs. Expense
             </button>
-            <button type="button" id="btnChartDaily" onclick="switchRightChart('daily')" class="px-3 py-1 rounded-lg hover:text-slate-900">
+            <button type="button" id="btnChartDaily" onclick="switchRightChart('daily')" class="px-3 py-1 rounded-lg hover:text-slate-900 dark:hover:text-white cursor-pointer">
               Daily Timeline
             </button>
           </div>
         </div>
 
-        <p class="text-xs text-slate-500 mb-6" id="chartDescription">
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-6" id="chartDescription">
           Comparison between total income, expenditures, and net cash flow for the month.
         </p>
 
@@ -321,19 +321,19 @@
 
         <!-- Income Sources Mini Cards -->
         {% if report.income_categories %}
-        <div class="mt-6 pt-5 border-t border-slate-100">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Income Breakdown by Source</h3>
+        <div class="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Income Breakdown by Source</h3>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {% for inc_cat in report.income_categories %}
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700">
               <div class="flex items-center gap-1.5 mb-1">
                 <span class="w-2 h-2 rounded-full" style="background-color: {{ inc_cat.color }};"></span>
-                <span class="text-xs font-bold text-slate-800 truncate">{{ inc_cat.category }}</span>
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{{ inc_cat.category }}</span>
               </div>
-              <div class="text-sm font-black font-mono text-slate-900">
+              <div class="text-sm font-black font-mono text-slate-900 dark:text-white">
                 {{ target_currency }} {{ "%.2f"|format(inc_cat.total_amount) }}
               </div>
-              <div class="text-[10px] text-slate-500 mt-0.5">{{ inc_cat.percentage }}% of income</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{{ inc_cat.percentage }}% of income</div>
             </div>
             {% endfor %}
           </div>
@@ -347,17 +347,17 @@
   <!-- ========================================== -->
   <!-- 4. Detailed Breakdown Tables & Tabs        -->
   <!-- ========================================== -->
-  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
 
     <!-- Tabs Header -->
-    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+    <div class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/60 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
       <div class="flex items-center gap-2">
         <button type="button"
                 id="tabBtnExpenses"
                 onclick="switchTableTab('expenses')"
-                class="px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 shadow-2xs border border-slate-200/60 flex items-center gap-2">
+                class="px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 dark:bg-slate-700 dark:text-white shadow-2xs border border-slate-200/60 dark:border-slate-600 flex items-center gap-2 cursor-pointer">
           <span>🧾 Itemized Expenditures</span>
-          <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 font-mono text-[10px] font-bold">
+          <span class="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 font-mono text-[10px] font-bold">
             {{ report.bills|length }}
           </span>
         </button>
@@ -365,34 +365,34 @@
         <button type="button"
                 id="tabBtnIncomes"
                 onclick="switchTableTab('incomes')"
-                class="px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 hover:text-slate-900 hover:bg-white/80 flex items-center gap-2">
+                class="px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer">
           <span>💰 Monthly Incomes</span>
-          <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold">
+          <span class="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold">
             {{ report.incomes|length }}
           </span>
         </button>
       </div>
 
-      <div class="text-xs text-slate-500 font-medium">
-        All amounts standardized to <span class="font-bold text-slate-800">{{ target_currency }}</span> using real-time rates.
+      <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+        All amounts standardized to <span class="font-bold text-slate-800 dark:text-slate-200">{{ target_currency }}</span> using real-time rates.
       </div>
     </div>
 
     <!-- Tab Content 1: Expenditures Table -->
     <div id="tabContentExpenses" class="p-6">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-slate-900">
-          Bills & Scanned Receipts for {{ report.period_label }}
+        <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+          Bills &amp; Scanned Receipts for {{ report.period_label }}
         </h3>
-        <span class="text-xs font-mono font-bold text-slate-600">
+        <span class="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
           Total: {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
         </span>
       </div>
 
       {% if report.bills %}
-      <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
         <table class="w-full text-left text-xs">
-          <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+          <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 text-[11px]">
             <tr>
               <th class="py-3 px-4">Date</th>
               <th class="py-3 px-4">Vendor</th>
@@ -403,22 +403,22 @@
               <th class="py-3 px-4 text-center">Receipt</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             {% for b in report.bills %}
-            <tr class="hover:bg-slate-50/70 transition">
-              <td class="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">{{ b.bill_date or '-' }}</td>
-              <td class="py-3 px-4 font-bold text-slate-900">{{ b.vendor_name or 'Unknown Vendor' }}</td>
+            <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition">
+              <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ b.bill_date or '-' }}</td>
+              <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ b.vendor_name or 'Unknown Vendor' }}</td>
               <td class="py-3 px-4">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200/60">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700">
                   <span class="w-2 h-2 rounded-full" style="background-color: {{ cat_colors.get(b.category, '#94A3B8') if cat_colors else '#6366F1' }};"></span>
                   {{ b.category }}
                 </span>
               </td>
-              <td class="py-3 px-4 text-slate-600">{{ b.payment_method or '-' }}</td>
-              <td class="py-3 px-4 text-right font-mono text-slate-600 whitespace-nowrap">
+              <td class="py-3 px-4 text-slate-600 dark:text-slate-400">{{ b.payment_method or '-' }}</td>
+              <td class="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 {{ b.currency }} {{ "%.2f"|format(b.total_amount) }}
               </td>
-              <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+              <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                 {{ target_currency }} {{ "%.2f"|format(b.total_amount_converted) }}
               </td>
               <td class="py-3 px-4 text-center">
@@ -426,7 +426,7 @@
                 <a href="{{ url_for('static', filename='uploads/' ~ b.image_path) }}"
                    target="_blank"
                    title="View original receipt image"
-                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition">
+                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition">
                   <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -434,7 +434,7 @@
                   View
                 </a>
                 {% else %}
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200" title="Manually entered without photo">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700" title="Manually entered without photo">
                   Manual
                 </span>
                 {% endif %}
@@ -442,10 +442,10 @@
             </tr>
             {% endfor %}
           </tbody>
-          <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+          <tfoot class="bg-slate-50 dark:bg-slate-800/80 font-bold border-t border-slate-200 dark:border-slate-700">
             <tr>
-              <td colspan="5" class="py-3 px-4 text-right text-slate-700 uppercase tracking-wider text-[11px]">Total Expenditures:</td>
-              <td class="py-3 px-4 text-right font-mono text-slate-900 text-sm">
+              <td colspan="5" class="py-3 px-4 text-right text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">Total Expenditures:</td>
+              <td class="py-3 px-4 text-right font-mono text-slate-900 dark:text-white text-sm">
                 {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
               </td>
               <td></td>
@@ -454,12 +454,12 @@
         </table>
       </div>
       {% else %}
-      <div class="py-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
-        <svg class="w-10 h-10 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="py-12 text-center text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+        <svg class="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
         </svg>
-        <p class="font-semibold text-slate-700 text-sm">No bills recorded for {{ report.period_label }}</p>
-        <p class="text-xs text-slate-400 mt-1">Scan or upload bills on the main dashboard to populate this table.</p>
+        <p class="font-semibold text-slate-700 dark:text-slate-300 text-sm">No bills recorded for {{ report.period_label }}</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Scan or upload bills on the main dashboard to populate this table.</p>
       </div>
       {% endif %}
     </div>
@@ -467,12 +467,12 @@
     <!-- Tab Content 2: Incomes Table (Hidden by default) -->
     <div id="tabContentIncomes" class="p-6 hidden">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-slate-900">
+        <h3 class="text-sm font-bold text-slate-900 dark:text-white">
           Incomes Recorded for {{ report.period_label }}
         </h3>
         <button type="button"
                 onclick="openIncomeModal()"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -481,9 +481,9 @@
       </div>
 
       {% if report.incomes %}
-      <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
         <table class="w-full text-left text-xs">
-          <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+          <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 text-[11px]">
             <tr>
               <th class="py-3 px-4">Date</th>
               <th class="py-3 px-4">Source / Title</th>
@@ -494,21 +494,21 @@
               <th class="py-3 px-4 text-center">Action</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             {% for inc in report.incomes %}
-            <tr class="hover:bg-slate-50/70 transition">
-              <td class="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">{{ inc.income_date or '-' }}</td>
-              <td class="py-3 px-4 font-bold text-slate-900">{{ inc.source }}</td>
+            <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition">
+              <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ inc.income_date or '-' }}</td>
+              <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ inc.source }}</td>
               <td class="py-3 px-4">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
                   {{ inc.category }}
                 </span>
               </td>
-              <td class="py-3 px-4 text-slate-500 max-w-xs truncate">{{ inc.notes or '-' }}</td>
-              <td class="py-3 px-4 text-right font-mono text-slate-600 whitespace-nowrap">
+              <td class="py-3 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">{{ inc.notes or '-' }}</td>
+              <td class="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
                 {{ inc.currency }} {{ "%.2f"|format(inc.amount) }}
               </td>
-              <td class="py-3 px-4 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+              <td class="py-3 px-4 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                 {{ target_currency }} {{ "%.2f"|format(inc.amount_converted) }}
               </td>
               <td class="py-3 px-4 text-center">
@@ -519,7 +519,7 @@
                   <input type="hidden" name="month" value="{{ selected_month }}">
                   <button type="submit"
                           title="Delete Income"
-                          class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                          class="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
@@ -529,10 +529,10 @@
             </tr>
             {% endfor %}
           </tbody>
-          <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+          <tfoot class="bg-slate-50 dark:bg-slate-800/80 font-bold border-t border-slate-200 dark:border-slate-700">
             <tr>
-              <td colspan="5" class="py-3 px-4 text-right text-slate-700 uppercase tracking-wider text-[11px]">Total Income:</td>
-              <td class="py-3 px-4 text-right font-mono text-emerald-700 text-sm">
+              <td colspan="5" class="py-3 px-4 text-right text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">Total Income:</td>
+              <td class="py-3 px-4 text-right font-mono text-emerald-700 dark:text-emerald-400 text-sm">
                 {{ target_currency }} {{ "%.2f"|format(report.total_income) }}
               </td>
               <td></td>
@@ -541,15 +541,15 @@
         </table>
       </div>
       {% else %}
-      <div class="py-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
-        <svg class="w-10 h-10 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="py-12 text-center text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+        <svg class="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        <p class="font-semibold text-slate-700 text-sm">No income recorded for {{ report.period_label }}</p>
-        <p class="text-xs text-slate-400 mt-1 mb-4">Add your monthly salary, freelance earnings, or profits to calculate net savings.</p>
+        <p class="font-semibold text-slate-700 dark:text-slate-300 text-sm">No income recorded for {{ report.period_label }}</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-4">Add your monthly salary, freelance earnings, or profits to calculate net savings.</p>
         <button type="button"
                 onclick="openIncomeModal()"
-                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs">
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs cursor-pointer">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -567,20 +567,20 @@
 <!-- 5. Accessible Modal Dialog: Add Income    -->
 <!-- ========================================== -->
 <dialog id="incomeModal"
-        class="rounded-2xl border border-slate-200 shadow-2xl p-0 w-full max-w-lg backdrop:bg-slate-900/60 backdrop:backdrop-blur-xs">
+        class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl p-0 w-full max-w-lg backdrop:bg-slate-900/60 backdrop:backdrop-blur-xs">
   <div class="p-6 sm:p-7">
-    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
       <div class="flex items-center gap-2.5">
-        <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+        <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
           </svg>
         </span>
-        <h3 class="text-lg font-extrabold text-slate-900">Record Monthly Income</h3>
+        <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Record Monthly Income</h3>
       </div>
       <button type="button"
               onclick="closeIncomeModal()"
-              class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+              class="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
         </svg>
@@ -589,7 +589,7 @@
 
     <form method="POST" action="{{ url_for('api_add_income') }}" class="mt-5 space-y-4">
       <div>
-        <label for="incomeSource" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+        <label for="incomeSource" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
           Income Source / Employer <span class="text-rose-500">*</span>
         </label>
         <input type="text"
@@ -597,18 +597,18 @@
                name="source"
                required
                placeholder="e.g. October Tech Salary, Freelance Client, Dividend"
-               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
+               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label for="incomeCategory" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+          <label for="incomeCategory" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
             Category <span class="text-rose-500">*</span>
           </label>
           <select id="incomeCategory"
                   name="category"
                   required
-                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
             {% for cat in income_categories %}
             <option value="{{ cat }}">{{ cat }}</option>
             {% endfor %}
@@ -616,7 +616,7 @@
         </div>
 
         <div>
-          <label for="incomeDate" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+          <label for="incomeDate" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
             Date <span class="text-rose-500">*</span>
           </label>
           <input type="date"
@@ -624,13 +624,13 @@
                  name="income_date"
                  required
                  value="{{ selected_month }}-01"
-                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label for="incomeAmount" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+          <label for="incomeAmount" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
             Amount <span class="text-rose-500">*</span>
           </label>
           <input type="number"
@@ -640,17 +640,17 @@
                  min="0.01"
                  required
                  placeholder="0.00"
-                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-mono text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
         </div>
 
         <div>
-          <label for="incomeCurrency" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+          <label for="incomeCurrency" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
             Currency <span class="text-rose-500">*</span>
           </label>
           <select id="incomeCurrency"
                   name="currency"
                   required
-                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
             {% for c in currencies %}
             <option value="{{ c }}" {% if c == target_currency %}selected{% endif %}>
               {{ c }}
@@ -661,24 +661,24 @@
       </div>
 
       <div>
-        <label for="incomeNotes" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+        <label for="incomeNotes" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
           Notes (Optional)
         </label>
         <textarea id="incomeNotes"
                   name="notes"
                   rows="2"
                   placeholder="e.g. Net after tax deduction, bonus payment..."
-                  class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"></textarea>
+                  class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"></textarea>
       </div>
 
-      <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+      <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
         <button type="button"
                 onclick="closeIncomeModal()"
-                class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition">
+                class="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold transition cursor-pointer">
           Cancel
         </button>
         <button type="submit"
-                class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition shadow-xs shadow-emerald-600/25">
+                class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition shadow-xs shadow-emerald-600/25 cursor-pointer">
           Save Income
         </button>
       </div>
@@ -730,16 +730,19 @@
     const tabContentExpenses = document.getElementById('tabContentExpenses');
     const tabContentIncomes = document.getElementById('tabContentIncomes');
 
+    const activeTabClass = "px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 dark:bg-slate-700 dark:text-white shadow-2xs border border-slate-200/60 dark:border-slate-600 flex items-center gap-2 cursor-pointer";
+    const inactiveTabClass = "px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-slate-700/50 flex items-center gap-2 cursor-pointer";
+
     if (tab === 'expenses') {
       tabContentExpenses.classList.remove('hidden');
       tabContentIncomes.classList.add('hidden');
-      tabBtnExpenses.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 shadow-2xs border border-slate-200/60 flex items-center gap-2";
-      tabBtnIncomes.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 hover:text-slate-900 hover:bg-white/80 flex items-center gap-2";
+      tabBtnExpenses.className = activeTabClass;
+      tabBtnIncomes.className = inactiveTabClass;
     } else {
       tabContentExpenses.classList.add('hidden');
       tabContentIncomes.classList.remove('hidden');
-      tabBtnExpenses.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 hover:text-slate-900 hover:bg-white/80 flex items-center gap-2";
-      tabBtnIncomes.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 shadow-2xs border border-slate-200/60 flex items-center gap-2";
+      tabBtnExpenses.className = inactiveTabClass;
+      tabBtnIncomes.className = activeTabClass;
     }
   }
 
@@ -753,17 +756,20 @@
     const containerDaily = document.getElementById('containerDailyChart');
     const desc = document.getElementById('chartDescription');
 
+    const activeBtnClass = "px-3 py-1 rounded-lg bg-white text-slate-900 dark:bg-slate-700 dark:text-white shadow-2xs cursor-pointer";
+    const inactiveBtnClass = "px-3 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer";
+
     if (mode === 'cashflow') {
       containerCashFlow.classList.remove('hidden');
       containerDaily.classList.add('hidden');
-      btnCashFlow.className = "px-3 py-1 rounded-lg bg-white text-slate-900 shadow-2xs";
-      btnDaily.className = "px-3 py-1 rounded-lg hover:text-slate-900";
+      btnCashFlow.className = activeBtnClass;
+      btnDaily.className = inactiveBtnClass;
       desc.textContent = "Comparison between total income, expenditures, and net cash flow for the month.";
     } else {
       containerCashFlow.classList.add('hidden');
       containerDaily.classList.remove('hidden');
-      btnCashFlow.className = "px-3 py-1 rounded-lg hover:text-slate-900";
-      btnDaily.className = "px-3 py-1 rounded-lg bg-white text-slate-900 shadow-2xs";
+      btnCashFlow.className = inactiveBtnClass;
+      btnDaily.className = activeBtnClass;
       desc.textContent = "Daily timeline of expenses and income events throughout the month.";
     }
   }
@@ -772,6 +778,9 @@
   // 4. Chart.js Visualizations
   // ==========================================
   const targetCurrency = "{{ target_currency }}";
+  const isDark = document.documentElement.classList.contains('dark');
+  const chartGridColor = isDark ? '#334155' : '#F1F5F9';
+  const chartTickColor = isDark ? '#94A3B8' : '#64748B';
 
   // Pie Chart: Expenditure Categories
   const expenseCategories = {{ report.expense_categories|tojson }};
@@ -790,7 +799,7 @@
           data: pieData,
           backgroundColor: pieColors,
           borderWidth: 2,
-          borderColor: '#ffffff',
+          borderColor: isDark ? '#0f172a' : '#ffffff',
           hoverOffset: 6
         }]
       },
@@ -857,15 +866,17 @@
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: '#F1F5F9' },
+            grid: { color: chartGridColor },
             ticks: {
+              color: chartTickColor,
               callback: function(v) {
                 return `${targetCurrency} ${v}`;
               }
             }
           },
           x: {
-            grid: { display: false }
+            grid: { display: false },
+            ticks: { color: chartTickColor }
           }
         }
       }
@@ -902,7 +913,10 @@
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top' },
+          legend: {
+            position: 'top',
+            labels: { color: chartTickColor }
+          },
           tooltip: {
             callbacks: {
               label: function(ctx) {
@@ -914,10 +928,12 @@
         scales: {
           y: {
             beginAtZero: true,
-            grid: { color: '#F1F5F9' }
+            grid: { color: chartGridColor },
+            ticks: { color: chartTickColor }
           },
           x: {
-            grid: { display: false }
+            grid: { display: false },
+            ticks: { color: chartTickColor }
           }
         }
       }
