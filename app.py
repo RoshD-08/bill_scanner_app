@@ -240,6 +240,9 @@ def index():
         summary=summary,
         bills=bills,
         categories=CATEGORIES,
+        income_categories=INCOME_CATEGORIES,
+        currencies=SUPPORTED_CURRENCIES,
+        supported_currencies=SUPPORTED_CURRENCIES,
         exchange_rates=rates,
         target_currency=target_curr
     )
@@ -259,6 +262,8 @@ def bills_page():
         "bills.html",
         bills=bills,
         categories=CATEGORIES,
+        currencies=SUPPORTED_CURRENCIES,
+        supported_currencies=SUPPORTED_CURRENCIES,
         target_currency=target_curr
     )
 
@@ -338,12 +343,9 @@ def ollama_status():
 @app.route("/save", methods=["POST"])
 @login_required
 def save():
-    """Save user-confirmed or edited bill data to SQLite associated with current user."""
+    """Save user-confirmed or manually entered bill data to SQLite associated with current user."""
     user_id = session.get("user_id")
     image_path = request.form.get("image_path", "").strip()
-    if not image_path:
-        flash("Cannot save bill without receipt image.", "error")
-        return redirect(url_for("index"))
 
     items_json = request.form.get("items_json", "[]")
     try:
@@ -356,6 +358,13 @@ def save():
     except (ValueError, TypeError):
         total_amount = 0.0
 
+    if total_amount <= 0 and items:
+        total_amount = sum(float(it.get("total") or 0.0) for it in items)
+
+    if total_amount <= 0:
+        flash("Please enter a bill amount greater than zero.", "error")
+        return redirect(request.referrer or url_for("index"))
+
     try:
         tax_amount = float(request.form.get("tax_amount", 0.0) or 0.0)
     except (ValueError, TypeError):
@@ -364,16 +373,18 @@ def save():
     user = get_user_by_id(user_id)
     default_curr = user.get("preferred_currency", "LKR") if user else "LKR"
     raw_curr = request.form.get("currency", default_curr).strip()
+    vendor_name = request.form.get("vendor_name", "").strip() or "Manual Expense"
+    bill_date = request.form.get("bill_date", "").strip() or datetime.now().strftime("%Y-%m-%d")
 
     data = {
-        "vendor_name": request.form.get("vendor_name", "").strip(),
-        "bill_date": request.form.get("bill_date", "").strip(),
+        "vendor_name": vendor_name,
+        "bill_date": bill_date,
         "bill_number": request.form.get("bill_number", "").strip(),
         "category": request.form.get("category", "Other").strip(),
         "total_amount": total_amount,
         "tax_amount": tax_amount,
         "currency": normalize_currency(raw_curr),
-        "payment_method": request.form.get("payment_method", "").strip(),
+        "payment_method": request.form.get("payment_method", "Cash").strip(),
         "items": items,
         "image_path": image_path,
         "raw_text": request.form.get("raw_text", "").strip(),
@@ -382,11 +393,12 @@ def save():
 
     try:
         save_bill(data, user_id=user_id)
-        flash(f"Bill from '{data['vendor_name'] or 'Unknown'}' saved to your private collection!", "success")
+        flash(f"Bill from '{data['vendor_name']}' saved successfully!", "success")
     except Exception as e:
         flash(f"Failed to save bill: {str(e)}", "error")
 
-    return redirect(url_for("index"))
+    redirect_target = request.form.get("redirect_to") or url_for("bills_page")
+    return redirect(redirect_target)
 
 
 @app.route("/delete/<int:bill_id>", methods=["POST"])
@@ -489,6 +501,10 @@ def api_add_income():
         flash(str(e), "error")
         if request.is_json:
             return jsonify({"error": str(e)}), 400
+
+    redirect_target = request.form.get("redirect_to")
+    if redirect_target:
+        return redirect(redirect_target)
 
     income_date = data.get("income_date", "")
     month_query = income_date[:7] if len(income_date) >= 7 else None

@@ -422,7 +422,7 @@
                 {{ target_currency }} {{ "%.2f"|format(b.total_amount_converted) }}
               </td>
               <td class="py-3 px-4 text-center">
-                {% if b.image_path %}
+                {% if b.image_path and b.image_path != '' %}
                 <a href="{{ url_for('static', filename='uploads/' ~ b.image_path) }}"
                    target="_blank"
                    title="View original receipt image"
@@ -434,7 +434,9 @@
                   View
                 </a>
                 {% else %}
-                <span class="text-slate-400">-</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200" title="Manually entered without photo">
+                  Manual
+                </span>
                 {% endif %}
               </td>
             </tr>
