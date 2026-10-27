@@ -102,23 +102,26 @@
         </a>
 
         <!-- User profile pill & Logout -->
-        <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <div class="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold">
-            <span class="w-6 h-6 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-[11px] uppercase">
+        <div class="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+          <div class="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold">
+            <span class="w-6 h-6 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-[11px] uppercase shadow-xs">
               {{ current_user.username[0] }}
             </span>
-            <span class="max-w-[120px] truncate">{{ current_user.username }}</span>
+            <span class="max-w-[120px] truncate font-bold text-slate-900">{{ current_user.username }}</span>
             <span class="px-1.5 py-0.5 rounded-md bg-white text-brand-700 font-mono text-[10px] font-extrabold border border-slate-200" title="Your preferred currency">
               {{ current_user.preferred_currency }}
             </span>
           </div>
+
+          <!-- High-Visibility Logout Button -->
           <a href="{{ url_for('logout') }}"
-             title="Sign Out"
-             class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-             aria-label="Sign Out">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+             title="Sign Out of {{ current_user.username }}"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 text-xs font-extrabold transition shadow-2xs hover:shadow-xs hover:border-rose-300 group cursor-pointer"
+             aria-label="Log Out">
+            <svg class="w-4 h-4 text-rose-500 group-hover:text-rose-700 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
+            <span>Log Out</span>
           </a>
         </div>
         {% else %}
@@ -149,6 +152,13 @@
     <a href="{{ url_for('reports') }}"
        class="flex items-center gap-1 px-3 py-1.5 rounded-xl transition bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xs font-extrabold">
       <span>📊 Reports</span>
+    </a>
+    <a href="{{ url_for('logout') }}"
+       class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl transition bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/30 font-bold">
+      <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      <span>Log Out</span>
     </a>
   </div>
   {% endif %}
