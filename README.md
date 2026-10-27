@@ -10,6 +10,7 @@ A standalone Python web application that extracts structured information from re
 
 ## ✨ Features
 
+- **🔐 User Accounts & Authentication**: Secure registration and login with password hashing. Each user has their own private dashboard and isolated bills.
 - **🦙 Meta Llama 3.2 Integration**: Uses Llama 3.2 running locally via [Ollama](https://ollama.com/library/llama3.2) to analyze bill text, handle complex formats, extract line items, and auto-categorize expenses.
 - **⚡ Fast On-Device OCR**: Powered by Hugging Face's `datalab-to/indra-ocr` (ONNX Runtime, ~18MB weights).
 - **📸 Direct Bill Ingestion**: Drag & drop receipt photos, browse files, or snap directly using a mobile camera.
@@ -64,5 +65,7 @@ bill_scanner_app/
 │   └── uploads/        # Stored receipt photos
 └── templates/
     ├── base.html       # Base layout with Tailwind CSS
-    └── index.html      # Unified scanner dashboard
+    ├── index.html      # Unified scanner dashboard
+    ├── login.html      # User login page
+    └── register.html   # User registration page
 ```

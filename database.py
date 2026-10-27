@@ -1,6 +1,7 @@
 """
 database.py
 SQLite database management for the standalone AI Bill Scanner application.
+Supports user authentication, multi-tenant bill scoping, and category summaries.
 Zero external configuration required.
 """
 
@@ -10,6 +11,7 @@ import json
 import csv
 import io
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bills.db")
 
@@ -35,13 +37,28 @@ def get_db():
 
 
 def init_db():
-    """Initialize the database schema if tables don't exist."""
+    """Initialize the database schema and migrate user columns if needed."""
     conn = get_db()
     try:
         with conn:
+            # 1. Users table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL COLLATE NOCASE,
+                    email TEXT UNIQUE COLLATE NOCASE,
+                    password_hash TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
+
+            # 2. Bills table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS bills (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id),
                     vendor_name TEXT,
                     bill_date TEXT,
                     bill_number TEXT,
@@ -59,12 +76,140 @@ def init_db():
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_bills_date ON bills(bill_date);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_bills_category ON bills(category);")
+
+            # 3. Check and migrate user_id column into bills if missing
+            cursor = conn.execute("PRAGMA table_info(bills);")
+            columns = [row["name"] for row in cursor.fetchall()]
+            if "user_id" not in columns:
+                conn.execute("ALTER TABLE bills ADD COLUMN user_id INTEGER REFERENCES users(id);")
+
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_bills_user ON bills(user_id);")
     finally:
         conn.close()
 
 
-def save_bill(data):
-    """Insert a new bill record into the database."""
+# ==========================================
+# User Authentication Functions
+# ==========================================
+
+def create_user(username, password, email=None):
+    """
+    Register a new user with hashed password.
+    Returns (user_dict, None) on success or (None, error_str) on validation/conflict failure.
+    """
+    username = (username or "").strip()
+    email = (email or "").strip().lower() or None
+    password = (password or "").strip()
+
+    if not username or len(username) < 3:
+        return None, "Username must be at least 3 characters long."
+    if len(username) > 30:
+        return None, "Username cannot exceed 30 characters."
+    if not password or len(password) < 6:
+        return None, "Password must be at least 6 characters long."
+
+    pwd_hash = generate_password_hash(password)
+
+    conn = get_db()
+    try:
+        with conn:
+            cursor = conn.execute("""
+                INSERT INTO users (username, email, password_hash)
+                VALUES (?, ?, ?)
+            """, (username, email, pwd_hash))
+            user_id = cursor.lastrowid
+
+            # If this is the first registered user, claim existing unowned bills
+            count_users = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
+            if count_users == 1:
+                conn.execute("UPDATE bills SET user_id = ? WHERE user_id IS NULL", (user_id,))
+
+            row = conn.execute(
+                "SELECT id, username, email, created_at FROM users WHERE id = ?",
+                (user_id,)
+            ).fetchone()
+            return dict(row), None
+    except sqlite3.IntegrityError as e:
+        err = str(e).lower()
+        if "username" in err:
+            return None, "That username is already taken. Please choose another."
+        elif "email" in err:
+            return None, "An account with that email already exists."
+        return None, "An account with these details already exists."
+    finally:
+        conn.close()
+
+
+def authenticate_user(username_or_email, password):
+    """
+    Verify user credentials by username or email.
+    Returns user dict on success, None on invalid credentials.
+    """
+    val = (username_or_email or "").strip()
+    pwd = (password or "").strip()
+    if not val or not pwd:
+        return None
+
+    conn = get_db()
+    try:
+        row = conn.execute("""
+            SELECT id, username, email, password_hash, created_at
+            FROM users
+            WHERE username = ? OR email = ?
+        """, (val, val.lower())).fetchone()
+        if not row:
+            return None
+
+        if check_password_hash(row["password_hash"], pwd):
+            return {
+                "id": row["id"],
+                "username": row["username"],
+                "email": row["email"],
+                "created_at": row["created_at"],
+            }
+        return None
+    finally:
+        conn.close()
+
+
+def get_user_by_id(user_id):
+    """Retrieve user record by ID (safe without password hash)."""
+    if not user_id:
+        return None
+    conn = get_db()
+    try:
+        row = conn.execute("""
+            SELECT id, username, email, created_at
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_user_by_username(username):
+    """Retrieve user record by username."""
+    if not username:
+        return None
+    conn = get_db()
+    try:
+        row = conn.execute("""
+            SELECT id, username, email, created_at
+            FROM users
+            WHERE username = ?
+        """, (username.strip(),)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+# ==========================================
+# Bill Management Functions (User-Scoped)
+# ==========================================
+
+def save_bill(data, user_id=None):
+    """Insert a new bill record into the database associated with user_id."""
     conn = get_db()
     try:
         items = data.get("items", [])
@@ -76,11 +221,12 @@ def save_bill(data):
         with conn:
             cursor = conn.execute("""
                 INSERT INTO bills (
-                    vendor_name, bill_date, bill_number, category,
+                    user_id, vendor_name, bill_date, bill_number, category,
                     total_amount, tax_amount, currency, payment_method,
                     items_json, image_path, raw_text, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
+                user_id,
                 data.get("vendor_name", "").strip(),
                 data.get("bill_date", "").strip() or None,
                 data.get("bill_number", "").strip() or None,
@@ -99,12 +245,16 @@ def save_bill(data):
         conn.close()
 
 
-def get_all_bills(category=None, start_date=None, end_date=None, query=None):
-    """Retrieve bills with optional filters."""
+def get_all_bills(user_id=None, category=None, start_date=None, end_date=None, query=None):
+    """Retrieve bills for a specific user with optional filters."""
     conn = get_db()
     try:
         sql = "SELECT * FROM bills WHERE 1=1"
         params = []
+
+        if user_id is not None:
+            sql += " AND user_id = ?"
+            params.append(user_id)
 
         if category and category.strip():
             sql += " AND category = ?"
@@ -143,11 +293,14 @@ def get_all_bills(category=None, start_date=None, end_date=None, query=None):
         conn.close()
 
 
-def get_bill_by_id(bill_id):
-    """Fetch single bill details by ID."""
+def get_bill_by_id(bill_id, user_id=None):
+    """Fetch single bill details by ID, validating user ownership if user_id given."""
     conn = get_db()
     try:
-        row = conn.execute("SELECT * FROM bills WHERE id = ?", (bill_id,)).fetchone()
+        if user_id is not None:
+            row = conn.execute("SELECT * FROM bills WHERE id = ? AND user_id = ?", (bill_id, user_id)).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM bills WHERE id = ?", (bill_id,)).fetchone()
         if not row:
             return None
         b = dict(row)
@@ -162,35 +315,51 @@ def get_bill_by_id(bill_id):
         conn.close()
 
 
-def delete_bill(bill_id):
-    """Delete a bill by ID and return its image_path."""
+def delete_bill(bill_id, user_id=None):
+    """Delete a bill by ID (restricted to user_id if given) and return its image_path."""
     conn = get_db()
     try:
-        row = conn.execute("SELECT image_path FROM bills WHERE id = ?", (bill_id,)).fetchone()
+        if user_id is not None:
+            row = conn.execute(
+                "SELECT image_path FROM bills WHERE id = ? AND user_id = ?",
+                (bill_id, user_id)
+            ).fetchone()
+        else:
+            row = conn.execute("SELECT image_path FROM bills WHERE id = ?", (bill_id,)).fetchone()
+
         if not row:
             return None
         image_path = row["image_path"]
         with conn:
-            conn.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
+            if user_id is not None:
+                conn.execute("DELETE FROM bills WHERE id = ? AND user_id = ?", (bill_id, user_id))
+            else:
+                conn.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
         return image_path
     finally:
         conn.close()
 
 
-def get_category_summary():
+def get_category_summary(user_id=None):
     """
-    Aggregate statistics grouped by category, with all bill totals converted to LKR.
-    Ensures that foreign currencies (USD, EUR, INR, etc.) are converted to LKR
-    for accurate totals, grand total, and share-of-spend percentages.
+    Aggregate statistics grouped by category for a specific user,
+    with all bill totals converted to LKR.
     """
     from currency import convert_to_lkr
 
     conn = get_db()
     try:
-        rows = conn.execute("""
-            SELECT id, category, total_amount, currency, bill_date
-            FROM bills
-        """).fetchall()
+        if user_id is not None:
+            rows = conn.execute("""
+                SELECT id, category, total_amount, currency, bill_date
+                FROM bills
+                WHERE user_id = ?
+            """, (user_id,)).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT id, category, total_amount, currency, bill_date
+                FROM bills
+            """).fetchall()
 
         cat_data = {}
         grand_total_lkr = 0.0
@@ -244,9 +413,9 @@ def get_category_summary():
         conn.close()
 
 
-def export_bills_to_csv():
-    """Generate a clean CSV string of all bills including LKR converted amounts."""
-    bills = get_all_bills()
+def export_bills_to_csv(user_id=None):
+    """Generate a clean CSV string of bills for a user including LKR converted amounts."""
+    bills = get_all_bills(user_id=user_id)
     output = io.StringIO()
     writer = csv.writer(output)
 

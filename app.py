@@ -1,20 +1,22 @@
 """
 app.py
 Standalone AI Bill Scanner & Categorizer Web Application.
+Supports multi-user authentication, login, registration, and user-scoped bill tracking.
 """
 
 import os
 import uuid
 import json
+from functools import wraps
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, flash, jsonify, Response
+    url_for, flash, jsonify, Response, session
 )
 from dotenv import load_dotenv
 
 from database import (
-    init_db, save_bill, get_all_bills,
-    delete_bill, get_category_summary,
+    init_db, create_user, authenticate_user, get_user_by_id,
+    save_bill, get_all_bills, delete_bill, get_category_summary,
     export_bills_to_csv, CATEGORIES
 )
 from currency import get_common_exchange_rates, fetch_live_rates
@@ -48,11 +50,126 @@ with app.app_context():
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 
+# ==========================================
+# Authentication Helpers
+# ==========================================
+
+def login_required(f):
+    """Decorator to require login on protected endpoints."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session:
+            if request.is_json or request.path.startswith("/api/") or request.path == "/upload":
+                return jsonify({"error": "Authentication required. Please log in."}), 401
+            flash("Please sign in to access your bill dashboard.", "error")
+            return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.context_processor
+def inject_user():
+    """Make current_user available to all Jinja templates."""
+    user_id = session.get("user_id")
+    current_user = None
+    if user_id:
+        current_user = get_user_by_id(user_id)
+        if not current_user:
+            # Stale session cleanup
+            session.clear()
+    return dict(current_user=current_user)
+
+
+# ==========================================
+# Auth Routes (Login, Register, Logout)
+# ==========================================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Sign in existing user."""
+    if "user_id" in session:
+        return redirect(url_for("index"))
+
+    next_url = request.args.get("next") or request.form.get("next") or url_for("index")
+
+    if request.method == "POST":
+        identifier = request.form.get("identifier", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if not identifier or not password:
+            flash("Please enter both your username/email and password.", "error")
+            return render_template("login.html", identifier=identifier, next_url=next_url)
+
+        user = authenticate_user(identifier, password)
+        if user:
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            flash(f"Welcome back, {user['username']}!", "success")
+            return redirect(next_url)
+        else:
+            flash("Invalid username/email or password. Please try again.", "error")
+            return render_template("login.html", identifier=identifier, next_url=next_url)
+
+    return render_template("login.html", next_url=next_url)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Create a new user account."""
+    if "user_id" in session:
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+
+        if not username or not password:
+            flash("Username and password are required.", "error")
+            return render_template("register.html", username=username, email=email)
+
+        if password != confirm_password:
+            flash("Passwords do not match. Please re-enter.", "error")
+            return render_template("register.html", username=username, email=email)
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters long.", "error")
+            return render_template("register.html", username=username, email=email)
+
+        user, error = create_user(username, password, email=email if email else None)
+        if error:
+            flash(error, "error")
+            return render_template("register.html", username=username, email=email)
+
+        # Log new user in automatically
+        session["user_id"] = user["id"]
+        session["username"] = user["username"]
+        flash(f"Account created successfully! Welcome, {user['username']}.", "success")
+        return redirect(url_for("index"))
+
+    return render_template("register.html")
+
+
+@app.route("/logout", methods=["GET", "POST"])
+def logout():
+    """Sign out current user."""
+    session.clear()
+    flash("You have been signed out successfully.", "success")
+    return redirect(url_for("login"))
+
+
+# ==========================================
+# Main Dashboard & Bill Routes
+# ==========================================
+
 @app.route("/")
+@login_required
 def index():
-    """Main dashboard displaying upload zone, category summary, and all bills."""
-    summary = get_category_summary()
-    bills = get_all_bills()
+    """Main dashboard displaying upload zone, category summary, and user's bills."""
+    user_id = session.get("user_id")
+    summary = get_category_summary(user_id=user_id)
+    bills = get_all_bills(user_id=user_id)
     rates = get_common_exchange_rates()
     return render_template(
         "index.html",
@@ -74,6 +191,7 @@ def api_currency_rates():
 
 
 @app.route("/upload", methods=["POST"])
+@login_required
 def upload():
     """Handle receipt image upload and trigger AI vision extraction."""
     file = request.files.get("bill_image") or request.files.get("file")
@@ -124,8 +242,10 @@ def ollama_status():
 
 
 @app.route("/save", methods=["POST"])
+@login_required
 def save():
-    """Save user-confirmed or edited bill data to SQLite."""
+    """Save user-confirmed or edited bill data to SQLite associated with current user."""
+    user_id = session.get("user_id")
     image_path = request.form.get("image_path", "").strip()
     if not image_path:
         flash("Cannot save bill without receipt image.", "error")
@@ -163,7 +283,7 @@ def save():
     }
 
     try:
-        save_bill(data)
+        save_bill(data, user_id=user_id)
         flash(f"Bill from '{data['vendor_name'] or 'Unknown'}' saved successfully!", "success")
     except Exception as e:
         flash(f"Failed to save bill: {str(e)}", "error")
@@ -172,9 +292,11 @@ def save():
 
 
 @app.route("/delete/<int:bill_id>", methods=["POST"])
+@login_required
 def delete(bill_id):
-    """Delete a bill record and clean up image file."""
-    image_path = delete_bill(bill_id)
+    """Delete a bill record owned by current user and clean up image file."""
+    user_id = session.get("user_id")
+    image_path = delete_bill(bill_id, user_id=user_id)
     if image_path:
         full_path = os.path.join(app.config["UPLOAD_FOLDER"], image_path)
         if os.path.exists(full_path):
@@ -184,15 +306,17 @@ def delete(bill_id):
                 pass
         flash("Bill deleted successfully.", "success")
     else:
-        flash("Bill not found.", "error")
+        flash("Bill not found or you do not have permission to delete it.", "error")
 
     return redirect(url_for("index"))
 
 
 @app.route("/export/csv")
+@login_required
 def export_csv():
-    """Export all bill records to CSV format."""
-    csv_data = export_bills_to_csv()
+    """Export current user's bill records to CSV format."""
+    user_id = session.get("user_id")
+    csv_data = export_bills_to_csv(user_id=user_id)
     return Response(
         csv_data,
         mimetype="text/csv",
@@ -201,9 +325,11 @@ def export_csv():
 
 
 @app.route("/api/summary")
+@login_required
 def api_summary():
-    """Return JSON category breakdown."""
-    return jsonify(get_category_summary())
+    """Return JSON category breakdown for current user."""
+    user_id = session.get("user_id")
+    return jsonify(get_category_summary(user_id=user_id))
 
 
 if __name__ == "__main__":
