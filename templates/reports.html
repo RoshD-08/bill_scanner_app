@@ -1,0 +1,950 @@
+{% extends "base.html" %}
+{% block title %}Monthly Financial Reports &middot; {{ report.period_label }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+  <!-- ========================================== -->
+  <!-- 1. Header & Period Navigation Controls     -->
+  <!-- ========================================== -->
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 no-print">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="p-2 rounded-xl bg-indigo-50 text-brand-600 font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </span>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Monthly Financial Report
+          </h1>
+        </div>
+        <p class="text-slate-500 text-sm mt-1.5">
+          Detailed income, expenditure, category breakdown, and net savings report for <span class="font-bold text-slate-800">{{ report.period_label }}</span>.
+        </p>
+      </div>
+
+      <!-- Actions & Month Selector -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <!-- Month Navigator -->
+        <div class="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1 shadow-2xs">
+          <a href="{{ url_for('reports', month=report.prev_month) }}"
+             title="Previous Month"
+             class="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-2xs transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </a>
+
+          <select id="monthSelector"
+                  onchange="location.href='{{ url_for('reports') }}?month=' + this.value"
+                  class="bg-transparent text-xs sm:text-sm font-bold text-slate-800 px-2.5 py-1 focus:outline-hidden cursor-pointer">
+            {% for m in available_months %}
+            <option value="{{ m.value }}" {% if m.value == selected_month %}selected{% endif %}>
+              {{ m.label }}
+            </option>
+            {% endfor %}
+          </select>
+
+          <a href="{{ url_for('reports', month=report.next_month) }}"
+             title="Next Month"
+             class="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-2xs transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+
+        <!-- Add Income Button -->
+        <button type="button"
+                onclick="openIncomeModal()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs shadow-emerald-600/25">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Add Income
+        </button>
+
+        <!-- Export CSV Button -->
+        <a href="{{ url_for('export_monthly_report_csv', month=selected_month) }}"
+           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition shadow-2xs">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Export CSV
+        </a>
+
+        <!-- Print / PDF Button -->
+        <button type="button"
+                onclick="window.print()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition shadow-2xs">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+          </svg>
+          Print / PDF
+        </button>
+
+        <!-- Preferred Currency Badge -->
+        <span class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-xs font-extrabold font-mono" title="Values standardized in your preferred currency">
+          {{ target_currency }} Standardized
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Print Header Only -->
+  <div class="hidden print-header p-4 border-b border-slate-300">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold">Monthly Financial Report &middot; {{ report.period_label }}</h1>
+        <p class="text-xs text-slate-500">User: {{ current_user.username }} | Standardized Currency: {{ target_currency }}</p>
+      </div>
+      <div class="text-xs font-mono text-slate-500">Generated on {{ report.period }}</div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. Four Key Performance Indicator (KPI) Cards -->
+  <!-- ========================================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+    <!-- Card 1: Total Monthly Income -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Income</span>
+        <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+          </svg>
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black text-slate-900 font-mono tracking-tight">
+          {{ target_currency }} {{ "%.2f"|format(report.total_income) }}
+        </div>
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
+          <span>{{ report.incomes|length }} sources recorded</span>
+          {% if report.inc_change_pct is not none %}
+            {% if report.inc_change_pct >= 0 %}
+              <span class="text-emerald-600 font-bold">↑ {{ report.inc_change_pct }}% vs last mo</span>
+            {% else %}
+              <span class="text-rose-600 font-bold">↓ {{ report.inc_change_pct|abs }}% vs last mo</span>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+    </div>
+
+    <!-- Card 2: Total Monthly Expenditure -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Expenditure</span>
+        <span class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
+          </svg>
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black text-slate-900 font-mono tracking-tight">
+          {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+        </div>
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
+          <span>{{ report.bills|length }} bills scanned</span>
+          {% if report.exp_change_pct is not none %}
+            {% if report.exp_change_pct <= 0 %}
+              <span class="text-emerald-600 font-bold">↓ {{ report.exp_change_pct|abs }}% vs last mo</span>
+            {% else %}
+              <span class="text-rose-600 font-bold">↑ {{ report.exp_change_pct }}% vs last mo</span>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      <div class="absolute bottom-0 left-0 right-0 h-1 bg-rose-500"></div>
+    </div>
+
+    <!-- Card 3: Net Savings / Cash Flow -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden {% if report.net_savings >= 0 %}bg-gradient-to-br from-white to-emerald-50/30{% else %}bg-gradient-to-br from-white to-rose-50/30{% endif %}">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Net Cash Flow</span>
+        <span class="w-8 h-8 rounded-xl {% if report.net_savings >= 0 %}bg-emerald-100/70 text-emerald-700{% else %}bg-rose-100/70 text-rose-700{% endif %} flex items-center justify-center font-bold">
+          {% if report.net_savings >= 0 %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          {% else %}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          {% endif %}
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black font-mono tracking-tight {% if report.net_savings >= 0 %}text-emerald-700{% else %}text-rose-600{% endif %}">
+          {% if report.net_savings >= 0 %}+{% endif %}{{ target_currency }} {{ "%.2f"|format(report.net_savings) }}
+        </div>
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
+          <span class="font-bold {% if report.net_savings >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+            Savings Rate: {{ report.savings_rate }}%
+          </span>
+          <span>&middot;</span>
+          <span>{% if report.net_savings >= 0 %}Surplus{% else %}Deficit{% endif %}</span>
+        </div>
+      </div>
+      <div class="absolute bottom-0 left-0 right-0 h-1 {% if report.net_savings >= 0 %}bg-emerald-500{% else %}bg-rose-500{% endif %}"></div>
+    </div>
+
+    <!-- Card 4: Daily Average Spend & Top Category -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Daily Average Spend</span>
+        <span class="w-8 h-8 rounded-xl bg-indigo-50 text-brand-600 flex items-center justify-center font-bold">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black text-slate-900 font-mono tracking-tight">
+          {{ target_currency }} {{ "%.2f"|format(report.daily_avg_spend) }}
+        </div>
+        <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 truncate">
+          {% if report.top_expense_category %}
+            <span>Top: <strong class="text-slate-800">{{ report.top_expense_category.category }}</strong> ({{ report.top_expense_category.percentage }}%)</span>
+          {% else %}
+            <span>No expenses this month</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="absolute bottom-0 left-0 right-0 h-1 bg-brand-500"></div>
+    </div>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. Interactive Charts Grid (Pie & Timeline)-->
+  <!-- ========================================== -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- Left: Expenditure Categories (Interactive Pie / Donut Chart) -->
+    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-brand-600"></span>
+            <h2 class="text-base font-extrabold text-slate-900">Expenditure by Category</h2>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold font-mono">
+            {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 mb-6">
+          Interactive distribution of your spending across categories. Hover over slices for details.
+        </p>
+
+        <!-- Chart Container -->
+        {% if report.expense_categories %}
+        <div class="relative flex items-center justify-center my-2">
+          <div class="w-64 h-64 max-w-full">
+            <canvas id="expensePieChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Category Legend with Amounts & Progress Bars -->
+        <div class="space-y-3 mt-6 max-h-60 overflow-y-auto pr-1">
+          {% for cat in report.expense_categories %}
+          <div class="p-2.5 rounded-xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ cat.color }};"></span>
+                <span class="font-bold text-slate-800 truncate">{{ cat.category }}</span>
+                <span class="text-slate-400">({{ cat.bill_count }})</span>
+              </div>
+              <div class="text-right flex-shrink-0 font-mono">
+                <span class="font-extrabold text-slate-900">{{ target_currency }} {{ "%.2f"|format(cat.total_amount) }}</span>
+                <span class="text-slate-500 ml-1">({{ cat.percentage }}%)</span>
+              </div>
+            </div>
+            <!-- Visual Bar -->
+            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full" style="width: {{ cat.percentage }}%; background-color: {{ cat.color }};"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="py-16 text-center text-slate-400">
+          <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+          </svg>
+          <p class="font-semibold text-slate-600 text-sm">No expenses for {{ report.period_label }}</p>
+          <p class="text-xs text-slate-400 mt-1">Upload or scan receipts to see expenditure pie charts.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right: Cash Flow & Daily Spend Activity -->
+    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between">
+      <div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <h2 class="text-base font-extrabold text-slate-900">Cash Flow & Daily Activity</h2>
+          </div>
+          <!-- Chart Mode Switcher -->
+          <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-bold text-slate-600 no-print">
+            <button type="button" id="btnChartCashFlow" onclick="switchRightChart('cashflow')" class="px-3 py-1 rounded-lg bg-white text-slate-900 shadow-2xs">
+              Income vs. Expense
+            </button>
+            <button type="button" id="btnChartDaily" onclick="switchRightChart('daily')" class="px-3 py-1 rounded-lg hover:text-slate-900">
+              Daily Timeline
+            </button>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500 mb-6" id="chartDescription">
+          Comparison between total income, expenditures, and net cash flow for the month.
+        </p>
+
+        <!-- Chart 1: Cash Flow Overview (Bar Chart) -->
+        <div id="containerCashFlowChart" class="h-72">
+          <canvas id="cashFlowBarChart"></canvas>
+        </div>
+
+        <!-- Chart 2: Daily Spending Timeline (Hidden by default) -->
+        <div id="containerDailyChart" class="h-72 hidden">
+          <canvas id="dailyTimelineChart"></canvas>
+        </div>
+
+        <!-- Income Sources Mini Cards -->
+        {% if report.income_categories %}
+        <div class="mt-6 pt-5 border-t border-slate-100">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Income Breakdown by Source</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {% for inc_cat in report.income_categories %}
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="w-2 h-2 rounded-full" style="background-color: {{ inc_cat.color }};"></span>
+                <span class="text-xs font-bold text-slate-800 truncate">{{ inc_cat.category }}</span>
+              </div>
+              <div class="text-sm font-black font-mono text-slate-900">
+                {{ target_currency }} {{ "%.2f"|format(inc_cat.total_amount) }}
+              </div>
+              <div class="text-[10px] text-slate-500 mt-0.5">{{ inc_cat.percentage }}% of income</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 4. Detailed Breakdown Tables & Tabs        -->
+  <!-- ========================================== -->
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+
+    <!-- Tabs Header -->
+    <div class="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+      <div class="flex items-center gap-2">
+        <button type="button"
+                id="tabBtnExpenses"
+                onclick="switchTableTab('expenses')"
+                class="px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 shadow-2xs border border-slate-200/60 flex items-center gap-2">
+          <span>🧾 Itemized Expenditures</span>
+          <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 font-mono text-[10px] font-bold">
+            {{ report.bills|length }}
+          </span>
+        </button>
+
+        <button type="button"
+                id="tabBtnIncomes"
+                onclick="switchTableTab('incomes')"
+                class="px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 hover:text-slate-900 hover:bg-white/80 flex items-center gap-2">
+          <span>💰 Monthly Incomes</span>
+          <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold">
+            {{ report.incomes|length }}
+          </span>
+        </button>
+      </div>
+
+      <div class="text-xs text-slate-500 font-medium">
+        All amounts standardized to <span class="font-bold text-slate-800">{{ target_currency }}</span> using real-time rates.
+      </div>
+    </div>
+
+    <!-- Tab Content 1: Expenditures Table -->
+    <div id="tabContentExpenses" class="p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-slate-900">
+          Bills & Scanned Receipts for {{ report.period_label }}
+        </h3>
+        <span class="text-xs font-mono font-bold text-slate-600">
+          Total: {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+        </span>
+      </div>
+
+      {% if report.bills %}
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+            <tr>
+              <th class="py-3 px-4">Date</th>
+              <th class="py-3 px-4">Vendor</th>
+              <th class="py-3 px-4">Category</th>
+              <th class="py-3 px-4">Payment</th>
+              <th class="py-3 px-4 text-right">Original Amount</th>
+              <th class="py-3 px-4 text-right">Converted ({{ target_currency }})</th>
+              <th class="py-3 px-4 text-center">Receipt</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for b in report.bills %}
+            <tr class="hover:bg-slate-50/70 transition">
+              <td class="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">{{ b.bill_date or '-' }}</td>
+              <td class="py-3 px-4 font-bold text-slate-900">{{ b.vendor_name or 'Unknown Vendor' }}</td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200/60">
+                  <span class="w-2 h-2 rounded-full" style="background-color: {{ cat_colors.get(b.category, '#94A3B8') if cat_colors else '#6366F1' }};"></span>
+                  {{ b.category }}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-slate-600">{{ b.payment_method or '-' }}</td>
+              <td class="py-3 px-4 text-right font-mono text-slate-600 whitespace-nowrap">
+                {{ b.currency }} {{ "%.2f"|format(b.total_amount) }}
+              </td>
+              <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                {{ target_currency }} {{ "%.2f"|format(b.total_amount_converted) }}
+              </td>
+              <td class="py-3 px-4 text-center">
+                {% if b.image_path %}
+                <a href="{{ url_for('static', filename='uploads/' ~ b.image_path) }}"
+                   target="_blank"
+                   title="View original receipt image"
+                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition">
+                  <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                  View
+                </a>
+                {% else %}
+                <span class="text-slate-400">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+            <tr>
+              <td colspan="5" class="py-3 px-4 text-right text-slate-700 uppercase tracking-wider text-[11px]">Total Expenditures:</td>
+              <td class="py-3 px-4 text-right font-mono text-slate-900 text-sm">
+                {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% else %}
+      <div class="py-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
+        <svg class="w-10 h-10 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+        </svg>
+        <p class="font-semibold text-slate-700 text-sm">No bills recorded for {{ report.period_label }}</p>
+        <p class="text-xs text-slate-400 mt-1">Scan or upload bills on the main dashboard to populate this table.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Tab Content 2: Incomes Table (Hidden by default) -->
+    <div id="tabContentIncomes" class="p-6 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-slate-900">
+          Incomes Recorded for {{ report.period_label }}
+        </h3>
+        <button type="button"
+                onclick="openIncomeModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Add Income
+        </button>
+      </div>
+
+      {% if report.incomes %}
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200 text-[11px]">
+            <tr>
+              <th class="py-3 px-4">Date</th>
+              <th class="py-3 px-4">Source / Title</th>
+              <th class="py-3 px-4">Category</th>
+              <th class="py-3 px-4">Notes</th>
+              <th class="py-3 px-4 text-right">Original Amount</th>
+              <th class="py-3 px-4 text-right">Converted ({{ target_currency }})</th>
+              <th class="py-3 px-4 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for inc in report.incomes %}
+            <tr class="hover:bg-slate-50/70 transition">
+              <td class="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">{{ inc.income_date or '-' }}</td>
+              <td class="py-3 px-4 font-bold text-slate-900">{{ inc.source }}</td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
+                  {{ inc.category }}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-slate-500 max-w-xs truncate">{{ inc.notes or '-' }}</td>
+              <td class="py-3 px-4 text-right font-mono text-slate-600 whitespace-nowrap">
+                {{ inc.currency }} {{ "%.2f"|format(inc.amount) }}
+              </td>
+              <td class="py-3 px-4 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                {{ target_currency }} {{ "%.2f"|format(inc.amount_converted) }}
+              </td>
+              <td class="py-3 px-4 text-center">
+                <form action="{{ url_for('api_delete_income', income_id=inc.id) }}"
+                      method="POST"
+                      onsubmit="return confirm('Are you sure you want to delete this income entry?');"
+                      class="inline-block">
+                  <input type="hidden" name="month" value="{{ selected_month }}">
+                  <button type="submit"
+                          title="Delete Income"
+                          class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="bg-slate-50 font-bold border-t border-slate-200">
+            <tr>
+              <td colspan="5" class="py-3 px-4 text-right text-slate-700 uppercase tracking-wider text-[11px]">Total Income:</td>
+              <td class="py-3 px-4 text-right font-mono text-emerald-700 text-sm">
+                {{ target_currency }} {{ "%.2f"|format(report.total_income) }}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% else %}
+      <div class="py-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
+        <svg class="w-10 h-10 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p class="font-semibold text-slate-700 text-sm">No income recorded for {{ report.period_label }}</p>
+        <p class="text-xs text-slate-400 mt-1 mb-4">Add your monthly salary, freelance earnings, or profits to calculate net savings.</p>
+        <button type="button"
+                onclick="openIncomeModal()"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Record Income
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ========================================== -->
+<!-- 5. Accessible Modal Dialog: Add Income    -->
+<!-- ========================================== -->
+<dialog id="incomeModal"
+        class="rounded-2xl border border-slate-200 shadow-2xl p-0 w-full max-w-lg backdrop:bg-slate-900/60 backdrop:backdrop-blur-xs">
+  <div class="p-6 sm:p-7">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+          </svg>
+        </span>
+        <h3 class="text-lg font-extrabold text-slate-900">Record Monthly Income</h3>
+      </div>
+      <button type="button"
+              onclick="closeIncomeModal()"
+              class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="POST" action="{{ url_for('api_add_income') }}" class="mt-5 space-y-4">
+      <div>
+        <label for="incomeSource" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+          Income Source / Employer <span class="text-rose-500">*</span>
+        </label>
+        <input type="text"
+               id="incomeSource"
+               name="source"
+               required
+               placeholder="e.g. October Tech Salary, Freelance Client, Dividend"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="incomeCategory" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Category <span class="text-rose-500">*</span>
+          </label>
+          <select id="incomeCategory"
+                  name="category"
+                  required
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
+            {% for cat in income_categories %}
+            <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="incomeDate" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Date <span class="text-rose-500">*</span>
+          </label>
+          <input type="date"
+                 id="incomeDate"
+                 name="income_date"
+                 required
+                 value="{{ selected_month }}-01"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="incomeAmount" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Amount <span class="text-rose-500">*</span>
+          </label>
+          <input type="number"
+                 id="incomeAmount"
+                 name="amount"
+                 step="0.01"
+                 min="0.01"
+                 required
+                 placeholder="0.00"
+                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
+        </div>
+
+        <div>
+          <label for="incomeCurrency" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Currency <span class="text-rose-500">*</span>
+          </label>
+          <select id="incomeCurrency"
+                  name="currency"
+                  required
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
+            {% for c in currencies %}
+            <option value="{{ c }}" {% if c == target_currency %}selected{% endif %}>
+              {{ c }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="incomeNotes" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+          Notes (Optional)
+        </label>
+        <textarea id="incomeNotes"
+                  name="notes"
+                  rows="2"
+                  placeholder="e.g. Net after tax deduction, bonus payment..."
+                  class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"></textarea>
+      </div>
+
+      <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+        <button type="button"
+                onclick="closeIncomeModal()"
+                class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition shadow-xs shadow-emerald-600/25">
+          Save Income
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+  // ==========================================
+  // 1. Modal Dialog Management (Add Income)
+  // ==========================================
+  const incomeModal = document.getElementById('incomeModal');
+
+  function openIncomeModal() {
+    if (incomeModal) {
+      incomeModal.showModal();
+    }
+  }
+
+  function closeIncomeModal() {
+    if (incomeModal) {
+      incomeModal.close();
+    }
+  }
+
+  // Close on outside click (light dismiss)
+  if (incomeModal) {
+    incomeModal.addEventListener('click', (e) => {
+      const rect = incomeModal.getBoundingClientRect();
+      const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height
+        && rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+      if (!isInDialog) {
+        incomeModal.close();
+      }
+    });
+  }
+
+  // ==========================================
+  // 2. Table Tabs Switcher
+  // ==========================================
+  function switchTableTab(tab) {
+    const tabBtnExpenses = document.getElementById('tabBtnExpenses');
+    const tabBtnIncomes = document.getElementById('tabBtnIncomes');
+    const tabContentExpenses = document.getElementById('tabContentExpenses');
+    const tabContentIncomes = document.getElementById('tabContentIncomes');
+
+    if (tab === 'expenses') {
+      tabContentExpenses.classList.remove('hidden');
+      tabContentIncomes.classList.add('hidden');
+      tabBtnExpenses.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 shadow-2xs border border-slate-200/60 flex items-center gap-2";
+      tabBtnIncomes.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 hover:text-slate-900 hover:bg-white/80 flex items-center gap-2";
+    } else {
+      tabContentExpenses.classList.add('hidden');
+      tabContentIncomes.classList.remove('hidden');
+      tabBtnExpenses.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition text-slate-600 hover:text-slate-900 hover:bg-white/80 flex items-center gap-2";
+      tabBtnIncomes.className = "px-4 py-2 rounded-xl text-xs font-extrabold transition bg-white text-slate-900 shadow-2xs border border-slate-200/60 flex items-center gap-2";
+    }
+  }
+
+  // ==========================================
+  // 3. Right Chart Mode Switcher
+  // ==========================================
+  function switchRightChart(mode) {
+    const btnCashFlow = document.getElementById('btnChartCashFlow');
+    const btnDaily = document.getElementById('btnChartDaily');
+    const containerCashFlow = document.getElementById('containerCashFlowChart');
+    const containerDaily = document.getElementById('containerDailyChart');
+    const desc = document.getElementById('chartDescription');
+
+    if (mode === 'cashflow') {
+      containerCashFlow.classList.remove('hidden');
+      containerDaily.classList.add('hidden');
+      btnCashFlow.className = "px-3 py-1 rounded-lg bg-white text-slate-900 shadow-2xs";
+      btnDaily.className = "px-3 py-1 rounded-lg hover:text-slate-900";
+      desc.textContent = "Comparison between total income, expenditures, and net cash flow for the month.";
+    } else {
+      containerCashFlow.classList.add('hidden');
+      containerDaily.classList.remove('hidden');
+      btnCashFlow.className = "px-3 py-1 rounded-lg hover:text-slate-900";
+      btnDaily.className = "px-3 py-1 rounded-lg bg-white text-slate-900 shadow-2xs";
+      desc.textContent = "Daily timeline of expenses and income events throughout the month.";
+    }
+  }
+
+  // ==========================================
+  // 4. Chart.js Visualizations
+  // ==========================================
+  const targetCurrency = "{{ target_currency }}";
+
+  // Pie Chart: Expenditure Categories
+  const expenseCategories = {{ report.expense_categories|tojson }};
+  const pieCanvas = document.getElementById('expensePieChart');
+
+  if (pieCanvas && expenseCategories && expenseCategories.length > 0) {
+    const pieLabels = expenseCategories.map(c => c.category);
+    const pieData = expenseCategories.map(c => c.total_amount);
+    const pieColors = expenseCategories.map(c => c.color);
+
+    new Chart(pieCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: pieLabels,
+        datasets: [{
+          data: pieData,
+          backgroundColor: pieColors,
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const val = ctx.parsed || 0;
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return ` ${ctx.label}: ${targetCurrency} ${val.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${pct}%)`;
+              }
+            }
+          }
+        },
+        cutout: '62%'
+      }
+    });
+  }
+
+  // Bar Chart: Cash Flow Overview (Income vs. Expense vs. Net)
+  const cashFlowCanvas = document.getElementById('cashFlowBarChart');
+  if (cashFlowCanvas) {
+    const totalIncome = {{ report.total_income }};
+    const totalExpense = {{ report.total_expenditure }};
+    const netSavings = {{ report.net_savings }};
+
+    new Chart(cashFlowCanvas, {
+      type: 'bar',
+      data: {
+        labels: ['Total Income', 'Total Expense', 'Net Cash Flow'],
+        datasets: [{
+          label: `Amount (${targetCurrency})`,
+          data: [totalIncome, totalExpense, netSavings],
+          backgroundColor: [
+            '#10B981', // Emerald for Income
+            '#F43F5E', // Rose for Expense
+            netSavings >= 0 ? '#059669' : '#DC2626' // Net Savings color
+          ],
+          borderRadius: 10,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const val = ctx.parsed.y || 0;
+                return ` ${ctx.label}: ${targetCurrency} ${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: '#F1F5F9' },
+            ticks: {
+              callback: function(v) {
+                return `${targetCurrency} ${v}`;
+              }
+            }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  // Line/Bar Chart: Daily Timeline
+  const dailyCanvas = document.getElementById('dailyTimelineChart');
+  if (dailyCanvas) {
+    const days = {{ report.daily_timeline.days|tojson }};
+    const dailyExpenses = {{ report.daily_timeline.expenses|tojson }};
+    const dailyIncomes = {{ report.daily_timeline.incomes|tojson }};
+
+    new Chart(dailyCanvas, {
+      type: 'bar',
+      data: {
+        labels: days.map(d => `Day ${d}`),
+        datasets: [
+          {
+            label: `Daily Expenses (${targetCurrency})`,
+            data: dailyExpenses,
+            backgroundColor: 'rgba(244, 63, 94, 0.75)',
+            borderRadius: 4
+          },
+          {
+            label: `Daily Income (${targetCurrency})`,
+            data: dailyIncomes,
+            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                return ` ${ctx.dataset.label}: ${targetCurrency} ${ctx.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: '#F1F5F9' }
+          },
+          x: {
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+</script>
+
+<style>
+  @media print {
+    .no-print, header, footer, #incomeModal {
+      display: none !important;
+    }
+    .print-header {
+      display: block !important;
+    }
+    body {
+      background: white !important;
+      color: black !important;
+    }
+    main {
+      padding: 0 !important;
+      max-width: 100% !important;
+    }
+    .shadow-sm, .shadow-xs, .shadow-2xs {
+      box-shadow: none !important;
+    }
+    .border {
+      border-color: #CBD5E1 !important;
+    }
+  }
+</style>
+{% endblock %}

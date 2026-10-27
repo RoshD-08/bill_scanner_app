@@ -9,6 +9,7 @@ import os
 import uuid
 import json
 from functools import wraps
+from datetime import datetime
 from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, jsonify, Response, session
@@ -18,7 +19,10 @@ from dotenv import load_dotenv
 from database import (
     init_db, create_user, authenticate_user, get_user_by_id,
     update_user_currency, save_bill, get_all_bills, delete_bill,
-    get_category_summary, export_bills_to_csv, CATEGORIES
+    get_category_summary, export_bills_to_csv, CATEGORIES,
+    INCOME_CATEGORIES, CATEGORY_COLORS, INCOME_COLORS,
+    save_income, delete_income, get_incomes,
+    get_monthly_financial_report, export_monthly_report_to_csv
 )
 from currency import (
     SUPPORTED_CURRENCIES, get_common_exchange_rates,
@@ -410,6 +414,137 @@ def api_summary():
     user = get_user_by_id(user_id)
     target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
     return jsonify(get_category_summary(user_id=user_id, target_currency=target_curr))
+
+
+# ==========================================
+# Monthly Financial Reports & Incomes Routes
+# ==========================================
+
+@app.route("/reports")
+@login_required
+def reports():
+    """Separate dedicated dashboard for monthly financial reports (incomes, expenditures, pie charts)."""
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+
+    month_param = request.args.get("month") or datetime.now().strftime("%Y-%m")
+    try:
+        parts = month_param.split("-")
+        year, month = int(parts[0]), int(parts[1])
+    except Exception:
+        now = datetime.now()
+        year, month = now.year, now.month
+
+    report = get_monthly_financial_report(user_id=user_id, year=year, month=month, target_currency=target_curr)
+
+    return render_template(
+        "reports.html",
+        report=report,
+        selected_month=report["period"],
+        available_months=report["available_months"],
+        income_categories=INCOME_CATEGORIES,
+        cat_colors=CATEGORY_COLORS,
+        inc_colors=INCOME_COLORS,
+        currencies=SUPPORTED_CURRENCIES,
+        target_currency=target_curr
+    )
+
+
+@app.route("/api/incomes", methods=["POST"])
+@login_required
+def api_add_income():
+    """Add a new income record for the current user."""
+    user_id = session.get("user_id")
+
+    if request.is_json and request.json:
+        data = request.json
+    else:
+        data = request.form.to_dict()
+
+    try:
+        income_id = save_income(data, user_id=user_id)
+        flash("Income entry recorded successfully.", "success")
+        if request.is_json:
+            return jsonify({"success": True, "income_id": income_id})
+    except ValueError as e:
+        flash(str(e), "error")
+        if request.is_json:
+            return jsonify({"error": str(e)}), 400
+
+    income_date = data.get("income_date", "")
+    month_query = income_date[:7] if len(income_date) >= 7 else None
+    if month_query:
+        return redirect(url_for("reports", month=month_query))
+    return redirect(url_for("reports"))
+
+
+@app.route("/api/incomes/<int:income_id>/delete", methods=["POST"])
+@login_required
+def api_delete_income(income_id):
+    """Delete an income record belonging to current user."""
+    user_id = session.get("user_id")
+    month_query = request.form.get("month") or request.args.get("month")
+
+    success = delete_income(income_id, user_id=user_id)
+    if success:
+        flash("Income entry deleted successfully.", "success")
+        if request.is_json:
+            return jsonify({"success": True})
+    else:
+        flash("Income entry not found or access denied.", "error")
+        if request.is_json:
+            return jsonify({"error": "Income entry not found or access denied."}), 404
+
+    if month_query:
+        return redirect(url_for("reports", month=month_query))
+    return redirect(url_for("reports"))
+
+
+@app.route("/reports/export/csv")
+@login_required
+def export_monthly_report_csv():
+    """Export monthly income and expenditure financial report to CSV."""
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+
+    month_param = request.args.get("month") or datetime.now().strftime("%Y-%m")
+    try:
+        parts = month_param.split("-")
+        year, month = int(parts[0]), int(parts[1])
+    except Exception:
+        now = datetime.now()
+        year, month = now.year, now.month
+
+    csv_data = export_monthly_report_to_csv(user_id=user_id, year=year, month=month, target_currency=target_curr)
+    filename = f"financial_report_{year:04d}_{month:02d}_{target_curr.lower()}.csv"
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.route("/api/reports")
+@login_required
+def api_reports():
+    """Return JSON monthly financial report data for current user."""
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+
+    month_param = request.args.get("month") or datetime.now().strftime("%Y-%m")
+    try:
+        parts = month_param.split("-")
+        year, month = int(parts[0]), int(parts[1])
+    except Exception:
+        now = datetime.now()
+        year, month = now.year, now.month
+
+    report = get_monthly_financial_report(user_id=user_id, year=year, month=month, target_currency=target_curr)
+    return jsonify(report)
 
 
 if __name__ == "__main__":
