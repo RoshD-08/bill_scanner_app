@@ -212,23 +212,104 @@
         </div>
       </div>
 
-      <!-- Profile & Financial Preferences Form -->
+      <!-- Dedicated Preferred Standard Currency Card -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center gap-3">
+            <span class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </span>
+            <div>
+              <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Preferred Standard Currency</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Choose your default currency for dashboard totals, bills, and monthly reports</p>
+            </div>
+          </div>
+          <!-- Current Active Badge -->
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 text-xs font-mono font-extrabold shadow-2xs self-start sm:self-auto">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Active: {{ target_currency }}</span>
+          </span>
+        </div>
+
+        <form action="{{ url_for('api_update_currency') }}" method="POST" id="currencyPreferenceForm" class="space-y-4">
+          <!-- Popular Currencies Quick-Select Pills -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+              Popular Currencies
+            </label>
+            <div class="flex flex-wrap gap-2">
+              {% for p_code in ['LKR', 'USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'AED', 'SGD'] %}
+                {% set curr_item = (supported_currencies | selectattr('code', 'equalto', p_code) | list | first) %}
+                {% if curr_item %}
+                <button type="button"
+                        onclick="selectQuickCurrency('{{ curr_item.code }}')"
+                        class="px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer {% if target_currency == curr_item.code %}bg-emerald-600 text-white shadow-xs shadow-emerald-500/25 ring-2 ring-emerald-500/20{% else %}bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700{% endif %}">
+                  <span class="font-mono">{{ curr_item.code }}</span>
+                  <span class="text-[11px] opacity-75">({{ curr_item.symbol }})</span>
+                </button>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- All Supported Currencies Dropdown with save button -->
+          <div class="pt-2">
+            <label for="currencySelectPicker" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Select Currency (All Supported)
+            </label>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div class="relative flex-1">
+                <select id="currencySelectPicker" name="currency"
+                        class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
+                  {% for c in supported_currencies %}
+                  <option value="{{ c.code }}" {% if target_currency == c.code %}selected{% endif %}>
+                    {{ c.code }} ({{ c.symbol }}) &mdash; {{ c.name }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <button type="submit"
+                      class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold transition shadow-xs shadow-emerald-600/25 flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>Save Currency</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
+            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+              Scanned bills uploaded in foreign currencies are automatically converted and standardized to <strong class="font-bold">{{ target_currency }}</strong> using real-time market exchange rates.
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Account Information Form -->
       <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xs">
         <div class="flex items-center gap-3 pb-4 mb-5 border-b border-slate-100 dark:border-slate-800">
-          <span class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+          <span class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
           </span>
           <div>
-            <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Account &amp; Currency Settings</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Configure your primary standardized currency and contact information</p>
+            <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Account Information</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Manage your vault username and contact email</p>
           </div>
         </div>
 
         <form action="{{ url_for('profile') }}" method="POST" class="space-y-4">
           <input type="hidden" name="action" value="update_settings">
           <input type="hidden" name="theme" id="formInputTheme" value="{{ user.theme or 'light' }}">
+          <input type="hidden" name="preferred_currency" value="{{ target_currency }}">
 
           <!-- Username (Readonly) -->
           <div>
@@ -249,28 +330,10 @@
                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
           </div>
 
-          <!-- Preferred Currency -->
-          <div>
-            <label for="profileCurrency" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Preferred Standard Currency <span class="text-rose-500">*</span>
-            </label>
-            <select id="profileCurrency" name="preferred_currency"
-                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition cursor-pointer">
-              {% for c in supported_currencies %}
-              <option value="{{ c.code }}" {% if target_currency == c.code %}selected{% endif %}>
-                {{ c.code }} ({{ c.symbol }}) &mdash; {{ c.name }}
-              </option>
-              {% endfor %}
-            </select>
-            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-              All scanned bills in foreign currencies (USD, EUR, GBP, etc.) will be automatically converted to this currency using live rates.
-            </p>
-          </div>
-
           <div class="pt-3 flex justify-end">
             <button type="submit"
-                    class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-700 text-white text-xs font-extrabold transition shadow-xs cursor-pointer">
-              💾 Save Profile Preferences
+                    class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-750 text-white text-xs font-extrabold transition shadow-xs cursor-pointer">
+              💾 Save Account Details
             </button>
           </div>
         </form>
@@ -421,6 +484,18 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ theme: mode })
       }).catch(() => {});
+    }
+  };
+
+  // Quick Currency Selector
+  window.selectQuickCurrency = function(code) {
+    const sel = document.getElementById('currencySelectPicker');
+    if (sel) {
+      sel.value = code;
+    }
+    const form = document.getElementById('currencyPreferenceForm');
+    if (form) {
+      form.submit();
     }
   };
 

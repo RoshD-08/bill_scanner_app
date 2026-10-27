@@ -214,10 +214,10 @@ def api_update_currency():
     clean_curr = normalize_currency(new_curr)
     update_user_currency(user_id, clean_curr)
     session["preferred_currency"] = clean_curr
-    flash(f"Dashboard currency updated to {clean_curr}.", "success")
+    flash(f"Preferred currency updated to {clean_curr}.", "success")
     if request.is_json:
         return jsonify({"success": True, "currency": clean_curr})
-    return redirect(url_for("index"))
+    return redirect(request.referrer or url_for("profile"))
 
 
 @app.route("/profile", methods=["GET", "POST"])
