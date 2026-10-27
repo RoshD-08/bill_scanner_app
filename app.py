@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from database import (
     init_db, create_user, authenticate_user, get_user_by_id,
     update_user_currency, update_user_theme, update_user_profile,
-    update_user_password, get_user_stats, save_bill, get_all_bills, delete_bill,
+    update_user_avatar, update_user_password, get_user_stats, save_bill, get_all_bills, delete_bill,
     get_category_summary, export_bills_to_csv, CATEGORIES,
     INCOME_CATEGORIES, CATEGORY_COLORS, INCOME_COLORS,
     save_income, delete_income, get_incomes,
@@ -47,10 +47,15 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 )
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "pdf"}
+ALLOWED_AVATAR_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
 
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def allowed_avatar_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
 
 
 # Ensure tables and uploads folder exist at startup
@@ -250,6 +255,45 @@ def profile():
                 flash(error or "Failed to update profile.", "error")
             return redirect(url_for("profile"))
 
+        elif action == "upload_avatar":
+            file = request.files.get("avatar")
+            if not file or file.filename == "":
+                flash("No file selected for profile picture.", "error")
+            elif not allowed_avatar_file(file.filename):
+                flash("Invalid image format. Please upload a PNG, JPG, JPEG, WEBP, or GIF image.", "error")
+            else:
+                ext = file.filename.rsplit(".", 1)[1].lower()
+                unique_name = f"avatar_{user_id}_{uuid.uuid4().hex[:8]}.{ext}"
+                dest_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+                file.save(dest_path)
+
+                # Remove old avatar file if present
+                old_avatar = user.get("avatar_path")
+                if old_avatar:
+                    old_path = os.path.join(app.config["UPLOAD_FOLDER"], old_avatar)
+                    if os.path.exists(old_path) and os.path.isfile(old_path):
+                        try:
+                            os.remove(old_path)
+                        except Exception:
+                            pass
+
+                update_user_avatar(user_id, unique_name)
+                flash("Profile picture updated successfully!", "success")
+            return redirect(url_for("profile"))
+
+        elif action == "remove_avatar":
+            old_avatar = user.get("avatar_path")
+            if old_avatar:
+                old_path = os.path.join(app.config["UPLOAD_FOLDER"], old_avatar)
+                if os.path.exists(old_path) and os.path.isfile(old_path):
+                    try:
+                        os.remove(old_path)
+                    except Exception:
+                        pass
+            update_user_avatar(user_id, None)
+            flash("Profile picture removed. Initials restored.", "success")
+            return redirect(url_for("profile"))
+
         elif action == "change_password":
             current_pwd = request.form.get("current_password", "").strip()
             new_pwd = request.form.get("new_password", "").strip()
@@ -305,6 +349,51 @@ def api_update_theme():
         return jsonify({"success": True, "theme": clean_theme})
     flash(f"Theme updated to {clean_theme.title()} Mode.", "success")
     return redirect(request.referrer or url_for("profile"))
+
+
+@app.route("/api/user/avatar", methods=["POST", "DELETE"])
+@login_required
+def api_user_avatar():
+    """Upload or remove user profile picture via API."""
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id)
+
+    if request.method == "DELETE" or (request.method == "POST" and request.form.get("action") == "remove"):
+        old_avatar = user.get("avatar_path")
+        if old_avatar:
+            old_path = os.path.join(app.config["UPLOAD_FOLDER"], old_avatar)
+            if os.path.exists(old_path) and os.path.isfile(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+        update_user_avatar(user_id, None)
+        return jsonify({"success": True, "avatar_url": None})
+
+    file = request.files.get("avatar")
+    if not file or file.filename == "":
+        return jsonify({"error": "No avatar file provided."}), 400
+
+    if not allowed_avatar_file(file.filename):
+        return jsonify({"error": "Invalid file type. Allowed: PNG, JPG, JPEG, WEBP, GIF."}), 400
+
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    unique_name = f"avatar_{user_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    dest_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+    file.save(dest_path)
+
+    old_avatar = user.get("avatar_path")
+    if old_avatar:
+        old_path = os.path.join(app.config["UPLOAD_FOLDER"], old_avatar)
+        if os.path.exists(old_path) and os.path.isfile(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+    update_user_avatar(user_id, unique_name)
+    avatar_url = url_for("static", filename=f"uploads/{unique_name}")
+    return jsonify({"success": True, "avatar_url": avatar_url, "avatar_path": unique_name})
 
 
 # ==========================================

@@ -93,13 +93,15 @@ def init_db():
             conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
 
-            # Check and migrate preferred_currency and theme columns into users if missing
+            # Check and migrate preferred_currency, theme, and avatar_path columns into users if missing
             cursor = conn.execute("PRAGMA table_info(users);")
             user_cols = [row["name"] for row in cursor.fetchall()]
             if "preferred_currency" not in user_cols:
                 conn.execute("ALTER TABLE users ADD COLUMN preferred_currency TEXT NOT NULL DEFAULT 'LKR';")
             if "theme" not in user_cols:
                 conn.execute("ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'light';")
+            if "avatar_path" not in user_cols:
+                conn.execute("ALTER TABLE users ADD COLUMN avatar_path TEXT DEFAULT NULL;")
 
             # 2. Bills table
             conn.execute("""
@@ -214,10 +216,14 @@ def authenticate_user(username_or_email, password):
 
     conn = get_db()
     try:
-        row = conn.execute("""
+        cursor = conn.execute("PRAGMA table_info(users);")
+        cols = [r["name"] for r in cursor.fetchall()]
+        theme_expr = "theme" if "theme" in cols else "'light' as theme"
+        avatar_expr = "avatar_path" if "avatar_path" in cols else "NULL as avatar_path"
+
+        row = conn.execute(f"""
             SELECT id, username, email, password_hash, preferred_currency,
-                   CASE WHEN theme IS NULL THEN 'light' ELSE theme END as theme,
-                   created_at
+                   {theme_expr}, {avatar_expr}, created_at
             FROM users
             WHERE username = ? OR email = ?
         """, (val, val.lower())).fetchone()
@@ -231,6 +237,7 @@ def authenticate_user(username_or_email, password):
                 "email": row["email"],
                 "preferred_currency": row["preferred_currency"] or "LKR",
                 "theme": row["theme"] or "light",
+                "avatar_path": row["avatar_path"],
                 "created_at": row["created_at"],
             }
         return None
@@ -246,12 +253,10 @@ def get_user_by_id(user_id):
     try:
         cursor = conn.execute("PRAGMA table_info(users);")
         cols = [r["name"] for r in cursor.fetchall()]
-        has_theme = "theme" in cols
+        theme_expr = "theme" if "theme" in cols else "'light' as theme"
+        avatar_expr = "avatar_path" if "avatar_path" in cols else "NULL as avatar_path"
 
-        if has_theme:
-            sql = "SELECT id, username, email, preferred_currency, theme, created_at FROM users WHERE id = ?"
-        else:
-            sql = "SELECT id, username, email, preferred_currency, 'light' as theme, created_at FROM users WHERE id = ?"
+        sql = f"SELECT id, username, email, preferred_currency, {theme_expr}, {avatar_expr}, created_at FROM users WHERE id = ?"
 
         row = conn.execute(sql, (user_id,)).fetchone()
         if row:
@@ -293,8 +298,8 @@ def update_user_theme(user_id, theme):
         conn.close()
 
 
-def update_user_profile(user_id, email=None, preferred_currency=None, theme=None):
-    """Update user's profile information (email, preferred_currency, theme)."""
+def update_user_profile(user_id, email=None, preferred_currency=None, theme=None, avatar_path=None):
+    """Update user's profile information (email, preferred_currency, theme, avatar_path)."""
     if not user_id:
         return False, "User not found."
     conn = get_db()
@@ -315,12 +320,28 @@ def update_user_profile(user_id, email=None, preferred_currency=None, theme=None
                 if t in ["light", "dark", "auto"]:
                     fields.append("theme = ?")
                     params.append(t)
+            if avatar_path is not None:
+                fields.append("avatar_path = ?")
+                params.append(avatar_path if avatar_path != "" else None)
             if fields:
                 params.append(user_id)
                 conn.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", params)
             return True, None
     except sqlite3.IntegrityError:
         return False, "That email is already registered to another account."
+    finally:
+        conn.close()
+
+
+def update_user_avatar(user_id, avatar_path):
+    """Update or remove user's avatar image path."""
+    if not user_id:
+        return False, "User not found."
+    conn = get_db()
+    try:
+        with conn:
+            conn.execute("UPDATE users SET avatar_path = ? WHERE id = ?", (avatar_path if avatar_path else None, user_id))
+        return True, None
     finally:
         conn.close()
 
