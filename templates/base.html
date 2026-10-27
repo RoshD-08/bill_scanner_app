@@ -53,21 +53,24 @@
         </a>
 
         {% if current_user %}
-        <nav class="hidden md:flex items-center gap-1.5 pl-4 border-l border-slate-200">
+        <nav class="hidden sm:flex items-center gap-2 pl-4 border-l border-slate-200">
           <a href="{{ url_for('index') }}"
-             class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {% if request.endpoint == 'index' %}bg-brand-50 text-brand-700 border border-brand-200/60 shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+             class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {% if request.endpoint == 'index' %}bg-slate-100 text-slate-900 border border-slate-200/80 shadow-2xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
-            Scanner & Bills
+            Scanner &amp; Bills
           </a>
+
+          <!-- High-Visibility Reports & Charts Button in Navbar -->
           <a href="{{ url_for('reports') }}"
-             class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {% if request.endpoint == 'reports' %}bg-brand-50 text-brand-700 border border-brand-200/60 shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shadow-xs {% if request.endpoint == 'reports' %}bg-indigo-600 text-white shadow-indigo-500/25 ring-2 ring-indigo-400{% else %}bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-indigo-500/20 hover:scale-102{% endif %}">
+            <svg class="w-4 h-4 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
             </svg>
-            Monthly Reports & Charts
+            <span>Monthly Reports &amp; Charts</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-wider">New</span>
           </a>
         </nav>
         {% endif %}
@@ -126,14 +129,15 @@
 
   {% if current_user %}
   <!-- Mobile Navigation Bar -->
-  <div class="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-bold no-print">
+  <div class="sm:hidden bg-slate-900 border-b border-indigo-950 px-4 py-2.5 flex items-center justify-around text-xs font-bold no-print shadow-sm">
     <a href="{{ url_for('index') }}"
-       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg {% if request.endpoint == 'index' %}bg-brand-50 text-brand-700{% else %}text-slate-600{% endif %}">
-      <span>🧾 Scanner & Bills</span>
+       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition {% if request.endpoint == 'index' %}bg-white/15 text-white{% else %}text-slate-300 hover:text-white{% endif %}">
+      <span>🧾 Scanner &amp; Bills</span>
     </a>
     <a href="{{ url_for('reports') }}"
-       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg {% if request.endpoint == 'reports' %}bg-brand-50 text-brand-700{% else %}text-slate-600{% endif %}">
-      <span>📊 Monthly Reports</span>
+       class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xs font-extrabold">
+      <span>📊 Reports &amp; Charts</span>
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
     </a>
   </div>
   {% endif %}
