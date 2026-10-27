@@ -18,7 +18,8 @@ from dotenv import load_dotenv
 
 from database import (
     init_db, create_user, authenticate_user, get_user_by_id,
-    update_user_currency, save_bill, get_all_bills, delete_bill,
+    update_user_currency, update_user_theme, update_user_profile,
+    update_user_password, get_user_stats, save_bill, get_all_bills, delete_bill,
     get_category_summary, export_bills_to_csv, CATEGORIES,
     INCOME_CATEGORIES, CATEGORY_COLORS, INCOME_COLORS,
     save_income, delete_income, get_incomes,
@@ -217,6 +218,93 @@ def api_update_currency():
     if request.is_json:
         return jsonify({"success": True, "currency": clean_curr})
     return redirect(url_for("index"))
+
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    """User profile & account settings page (theme, currency, email, password, stats)."""
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+
+    if request.method == "POST":
+        action = request.form.get("action", "")
+
+        if action == "update_settings":
+            new_theme = request.form.get("theme", user.get("theme", "light"))
+            new_curr = request.form.get("preferred_currency", target_curr)
+            new_email = request.form.get("email", user.get("email", ""))
+
+            success, error = update_user_profile(
+                user_id=user_id,
+                email=new_email,
+                preferred_currency=new_curr,
+                theme=new_theme
+            )
+            if success:
+                session["preferred_currency"] = normalize_currency(new_curr)
+                session["theme"] = new_theme
+                flash("Profile and preferences updated successfully!", "success")
+            else:
+                flash(error or "Failed to update profile.", "error")
+            return redirect(url_for("profile"))
+
+        elif action == "change_password":
+            current_pwd = request.form.get("current_password", "").strip()
+            new_pwd = request.form.get("new_password", "").strip()
+            confirm_pwd = request.form.get("confirm_password", "").strip()
+
+            if new_pwd != confirm_pwd:
+                flash("New passwords do not match. Please try again.", "error")
+            elif len(new_pwd) < 6:
+                flash("New password must be at least 6 characters long.", "error")
+            else:
+                success, error = update_user_password(user_id, current_pwd, new_pwd)
+                if success:
+                    flash("Password changed successfully!", "success")
+                else:
+                    flash(error or "Password update failed.", "error")
+            return redirect(url_for("profile"))
+
+    # Refresh user
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+    stats = get_user_stats(user_id=user_id, target_currency=target_curr)
+
+    return render_template(
+        "profile.html",
+        user=user,
+        stats=stats,
+        supported_currencies=SUPPORTED_CURRENCIES,
+        target_currency=target_curr
+    )
+
+
+@app.route("/api/user/theme", methods=["POST"])
+@login_required
+def api_update_theme():
+    """Update user theme preference dynamically via JSON or form."""
+    user_id = session.get("user_id")
+    if request.is_json and request.json:
+        theme = request.json.get("theme")
+    else:
+        theme = request.form.get("theme")
+
+    if not theme:
+        return jsonify({"error": "No theme specified."}), 400
+
+    clean_theme = theme.lower().strip()
+    if clean_theme not in ["light", "dark", "auto"]:
+        clean_theme = "light"
+
+    update_user_theme(user_id, clean_theme)
+    session["theme"] = clean_theme
+
+    if request.is_json:
+        return jsonify({"success": True, "theme": clean_theme})
+    flash(f"Theme updated to {clean_theme.title()} Mode.", "success")
+    return redirect(request.referrer or url_for("profile"))
 
 
 # ==========================================

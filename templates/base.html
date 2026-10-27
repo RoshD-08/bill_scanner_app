@@ -14,6 +14,7 @@
 
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -33,11 +34,23 @@
       }
     }
   </script>
+  <script>
+    // Early theme initialization to prevent flash
+    (function() {
+      const userTheme = '{{ current_user.theme if current_user and current_user.theme else "light" }}';
+      const saved = localStorage.getItem('theme') || userTheme;
+      if (saved === 'dark' || (saved === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
 </head>
-<body class="bg-slate-50 text-slate-900 font-sans min-h-screen flex flex-col antialiased">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans min-h-screen flex flex-col antialiased transition-colors duration-150">
 
   <!-- Top Navigation -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs transition-colors duration-150">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
       <!-- Left: Logo & Primary Navigation -->
       <div class="flex items-center gap-4 lg:gap-6 min-w-0">
@@ -48,16 +61,16 @@
             </svg>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="font-black text-lg tracking-tight text-slate-900">BillAI</span>
-            <span class="hidden md:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">OCR</span>
+            <span class="font-black text-lg tracking-tight text-slate-900 dark:text-white">BillAI</span>
+            <span class="hidden md:inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800">OCR</span>
           </div>
         </a>
 
         {% if current_user %}
         <!-- Primary Navigation Tabs with proper breathing room -->
-        <nav class="hidden md:flex items-center gap-2.5 lg:gap-3 pl-4 lg:pl-6 border-l border-slate-200">
+        <nav class="hidden md:flex items-center gap-2.5 lg:gap-3 pl-4 lg:pl-6 border-l border-slate-200 dark:border-slate-800">
           <a href="{{ url_for('index') }}"
-             class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 {% if request.endpoint == 'index' %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+             class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 {% if request.endpoint == 'index' %}bg-slate-900 text-white dark:bg-slate-800 shadow-xs{% else %}text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}">
             <svg class="w-4 h-4 {% if request.endpoint == 'index' %}text-brand-400{% else %}text-slate-400{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -65,7 +78,7 @@
           </a>
 
           <a href="{{ url_for('bills_page') }}"
-             class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 {% if request.endpoint == 'bills_page' %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+             class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 {% if request.endpoint == 'bills_page' %}bg-slate-900 text-white dark:bg-slate-800 shadow-xs{% else %}text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}">
             <svg class="w-4 h-4 {% if request.endpoint == 'bills_page' %}text-emerald-400{% else %}text-emerald-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
@@ -73,7 +86,7 @@
           </a>
 
           <a href="{{ url_for('reports') }}"
-             class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 {% if request.endpoint == 'reports' %}bg-indigo-600 text-white shadow-xs shadow-indigo-500/25{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+             class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 {% if request.endpoint == 'reports' %}bg-indigo-600 text-white shadow-xs shadow-indigo-500/25{% else %}text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}">
             <svg class="w-4 h-4 {% if request.endpoint == 'reports' %}text-indigo-200{% else %}text-indigo-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
@@ -87,21 +100,27 @@
       <!-- Right: User Profile & Actions -->
       <div class="flex items-center gap-3 sm:gap-4 flex-shrink-0">
         {% if current_user %}
-        <!-- User profile badge -->
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200 text-slate-800 text-xs font-semibold shadow-2xs">
-          <span class="w-6 h-6 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-[11px] uppercase shadow-xs">
+        <!-- User Profile & Settings Button (Clickable) -->
+        <a href="{{ url_for('profile') }}"
+           title="View Profile &amp; Settings (Theme, Currency, Security)"
+           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl transition shadow-2xs hover:shadow-xs group cursor-pointer border {% if request.endpoint == 'profile' %}bg-brand-50/90 dark:bg-brand-950/40 border-brand-300 dark:border-brand-700 text-brand-900 dark:text-brand-200 ring-2 ring-brand-500/20{% else %}bg-slate-100/90 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600{% endif %}">
+          <span class="w-6 h-6 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-[11px] uppercase shadow-xs group-hover:scale-105 transition-transform">
             {{ current_user.username[0] }}
           </span>
-          <span class="max-w-[120px] truncate font-bold text-slate-900">{{ current_user.username }}</span>
-          <span class="px-1.5 py-0.5 rounded-md bg-white text-brand-700 font-mono text-[10px] font-extrabold border border-slate-200" title="Your preferred currency">
+          <span class="max-w-[120px] truncate font-bold text-slate-900 dark:text-white">{{ current_user.username }}</span>
+          <span class="px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-900 text-brand-700 dark:text-brand-300 font-mono text-[10px] font-extrabold border border-slate-200 dark:border-slate-700" title="Your preferred currency">
             {{ current_user.preferred_currency }}
           </span>
-        </div>
+          <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </a>
 
         <!-- High-Visibility Logout Button -->
         <a href="{{ url_for('logout') }}"
            title="Sign Out of {{ current_user.username }}"
-           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 text-xs font-extrabold transition shadow-2xs hover:shadow-xs hover:border-rose-300 group cursor-pointer"
+           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 text-rose-700 dark:text-rose-300 hover:text-rose-800 text-xs font-extrabold transition shadow-2xs hover:shadow-xs hover:border-rose-300 group cursor-pointer"
            aria-label="Log Out">
           <svg class="w-4 h-4 text-rose-500 group-hover:text-rose-700 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
@@ -110,7 +129,7 @@
         </a>
         {% else %}
         <a href="{{ url_for('login') }}"
-           class="px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:text-brand-600 transition">
+           class="px-3.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-brand-600 transition">
           Sign In
         </a>
         <a href="{{ url_for('register') }}"
@@ -126,23 +145,27 @@
   <!-- Mobile Navigation Bar -->
   <div class="sm:hidden bg-slate-900 border-b border-indigo-950 px-3 py-2 flex items-center justify-around text-xs font-bold no-print shadow-sm">
     <a href="{{ url_for('index') }}"
-       class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl transition {% if request.endpoint == 'index' %}bg-white/15 text-white{% else %}text-slate-300 hover:text-white{% endif %}">
+       class="flex items-center gap-1 px-2 py-1.5 rounded-xl transition {% if request.endpoint == 'index' %}bg-white/15 text-white{% else %}text-slate-300 hover:text-white{% endif %}">
       <span>⚡ Scan</span>
     </a>
     <a href="{{ url_for('bills_page') }}"
-       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition {% if request.endpoint == 'bills_page' %}bg-white text-slate-900 font-extrabold shadow-xs{% else %}bg-slate-800 text-white hover:bg-slate-700 font-extrabold border border-slate-700{% endif %}">
-      <span>🧾 All Bills</span>
+       class="flex items-center gap-1 px-2 py-1.5 rounded-xl transition {% if request.endpoint == 'bills_page' %}bg-white text-slate-900 font-extrabold shadow-xs{% else %}bg-slate-800 text-white hover:bg-slate-700 font-extrabold border border-slate-700{% endif %}">
+      <span>🧾 Bills</span>
     </a>
     <a href="{{ url_for('reports') }}"
-       class="flex items-center gap-1 px-3 py-1.5 rounded-xl transition bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xs font-extrabold">
+       class="flex items-center gap-1 px-2 py-1.5 rounded-xl transition bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xs font-extrabold">
       <span>📊 Reports</span>
     </a>
+    <a href="{{ url_for('profile') }}"
+       class="flex items-center gap-1 px-2 py-1.5 rounded-xl transition {% if request.endpoint == 'profile' %}bg-brand-600 text-white font-extrabold{% else %}text-slate-300 hover:text-white{% endif %}">
+      <span>⚙️ Profile</span>
+    </a>
     <a href="{{ url_for('logout') }}"
-       class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl transition bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/30 font-bold">
+       class="flex items-center gap-1 px-2 py-1.5 rounded-xl transition bg-rose-500/20 text-rose-300 hover:text-white border border-rose-500/30 font-bold">
       <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
       </svg>
-      <span>Log Out</span>
+      <span>Exit</span>
     </a>
   </div>
   {% endif %}
@@ -168,12 +191,28 @@
   </main>
 
   <!-- Footer -->
-  <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-      <p>&copy; BillAI &middot; Standalone AI Bill Scanner & Categorizer</p>
-      <p class="font-mono text-slate-400">Powered by Google Gemini 2.0 Flash Vision & SQLite</p>
+  <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 mt-auto text-slate-500 dark:text-slate-400 transition-colors duration-150">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+      <p>&copy; BillAI &middot; Standalone AI Bill Scanner &amp; Categorizer</p>
+      <p class="font-mono text-slate-400 dark:text-slate-500">Powered by Google Gemini 2.0 Flash Vision &amp; SQLite</p>
     </div>
   </footer>
+
+  <script>
+    window.applyTheme = function(theme) {
+      localStorage.setItem('theme', theme);
+      if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      fetch("{{ url_for('api_update_theme') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: theme })
+      }).catch(() => {});
+    };
+  </script>
 
   {% block scripts %}{% endblock %}
 </body>

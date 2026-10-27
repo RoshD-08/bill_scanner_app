@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% block title %}User Profile &amp; Settings &middot; BillAI{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-5xl mx-auto">
+
+  <!-- ========================================== -->
+  <!-- 1. Profile Header & Banner                 -->
+  <!-- ========================================== -->
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl border border-indigo-900/40">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div class="flex items-center gap-5">
+        <!-- Big Avatar with initials -->
+        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-lg shadow-brand-500/30 border-2 border-white/20 flex-shrink-0">
+          {{ user.username[0]|upper }}
+        </div>
+
+        <div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">{{ user.username }}</h1>
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              <svg class="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              Private Vault
+            </span>
+          </div>
+
+          <p class="text-xs sm:text-sm text-indigo-200 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>Email: <strong class="text-white">{{ user.email or 'Not provided' }}</strong></span>
+            <span>&bull;</span>
+            <span>Member since: <strong class="text-white">{{ user.created_at[:10] if user.created_at else 'Active' }}</strong></span>
+            <span>&bull;</span>
+            <span>Currency: <strong class="text-emerald-300 font-mono">{{ target_currency }}</strong></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Action Shortcuts -->
+      <div class="flex items-center gap-2.5 flex-shrink-0">
+        <a href="{{ url_for('bills_page') }}"
+           class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/15 flex items-center gap-1.5 backdrop-blur-xs">
+          <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          View Bills
+        </a>
+        <a href="{{ url_for('reports') }}"
+           class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+          </svg>
+          Analytics
+        </a>
+      </div>
+    </div>
+
+    <!-- Decorative background glows -->
+    <div class="absolute -right-8 -top-8 w-44 h-44 bg-brand-500/20 rounded-full blur-2xl pointer-events-none"></div>
+    <div class="absolute right-40 -bottom-8 w-36 h-36 bg-purple-500/20 rounded-full blur-xl pointer-events-none"></div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. Lifetime Statistics KPI Cards           -->
+  <!-- ========================================== -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Total Bills -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition">
+      <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider">Total Bills</span>
+        <span class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+          🧾
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black text-slate-900 dark:text-white font-mono">{{ stats.bill_count }}</div>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Recorded in your vault</p>
+      </div>
+    </div>
+
+    <!-- Total Spent -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition">
+      <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider">Total Expenses</span>
+        <span class="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
+          💸
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
+          <span class="text-xs mr-0.5 font-normal text-slate-400">{{ target_currency }}</span>{{ "{:,.2f}".format(stats.total_spent) }}
+        </div>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Standardized to {{ target_currency }}</p>
+      </div>
+    </div>
+
+    <!-- Total Income -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition">
+      <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider">Total Incomes</span>
+        <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+          💰
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+          <span class="text-xs mr-0.5 font-normal text-slate-400">{{ target_currency }}</span>{{ "{:,.2f}".format(stats.total_income) }}
+        </div>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{{ stats.income_count }} income entries</p>
+      </div>
+    </div>
+
+    <!-- Net Cash Balance -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition">
+      <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+        <span class="text-xs font-bold uppercase tracking-wider">Net Savings</span>
+        <span class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+          📊
+        </span>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl font-black {% if stats.net_balance >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-rose-600 dark:text-rose-400{% endif %} font-mono">
+          <span class="text-xs mr-0.5 font-normal text-slate-400">{{ target_currency }}</span>{{ "{:,.2f}".format(stats.net_balance) }}
+        </div>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Overall lifetime savings</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. Settings Form Grid                      -->
+  <!-- ========================================== -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- Left Column: Theme & General Preferences (8 cols) -->
+    <div class="lg:col-span-8 space-y-6">
+
+      <!-- Appearance & Theme Card -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xs">
+        <div class="flex items-center gap-3 pb-4 mb-5 border-b border-slate-100 dark:border-slate-800">
+          <span class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+          </span>
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Theme &amp; Appearance</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Choose your preferred visual theme for the entire BillAI dashboard</p>
+          </div>
+        </div>
+
+        <!-- 3-Way Theme Switcher Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5" id="themeCardsGroup">
+          <!-- Light Mode Option -->
+          <button type="button" onclick="selectThemeMode('light')" id="themeBtnLight"
+                  class="p-4 rounded-2xl border-2 text-left transition flex flex-col justify-between gap-3 cursor-pointer group hover:border-brand-500/50 bg-slate-50 dark:bg-slate-800/50">
+            <div class="flex items-center justify-between">
+              <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                ☀️
+              </span>
+              <span class="theme-check-indicator w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center">
+                <span class="dot w-2.5 h-2.5 rounded-full bg-brand-600 hidden"></span>
+              </span>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-slate-900 dark:text-white">Light Mode</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Crisp, clean bright canvas</p>
+            </div>
+          </button>
+
+          <!-- Dark Mode Option -->
+          <button type="button" onclick="selectThemeMode('dark')" id="themeBtnDark"
+                  class="p-4 rounded-2xl border-2 text-left transition flex flex-col justify-between gap-3 cursor-pointer group hover:border-brand-500/50 bg-slate-50 dark:bg-slate-800/50">
+            <div class="flex items-center justify-between">
+              <span class="w-8 h-8 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-800 flex items-center justify-center font-bold text-sm">
+                🌙
+              </span>
+              <span class="theme-check-indicator w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center">
+                <span class="dot w-2.5 h-2.5 rounded-full bg-brand-600 hidden"></span>
+              </span>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-slate-900 dark:text-white">Dark Mode</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Sleek, low-glare dark aesthetic</p>
+            </div>
+          </button>
+
+          <!-- System Auto Option -->
+          <button type="button" onclick="selectThemeMode('auto')" id="themeBtnAuto"
+                  class="p-4 rounded-2xl border-2 text-left transition flex flex-col justify-between gap-3 cursor-pointer group hover:border-brand-500/50 bg-slate-50 dark:bg-slate-800/50">
+            <div class="flex items-center justify-between">
+              <span class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-sm">
+                💻
+              </span>
+              <span class="theme-check-indicator w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center">
+                <span class="dot w-2.5 h-2.5 rounded-full bg-brand-600 hidden"></span>
+              </span>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-slate-900 dark:text-white">System Auto</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Syncs with your device theme</p>
+            </div>
+          </button>
+        </div>
+
+        <div class="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+          <svg class="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Your theme selection applies immediately and persists across all devices and sessions.</span>
+        </div>
+      </div>
+
+      <!-- Profile & Financial Preferences Form -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xs">
+        <div class="flex items-center gap-3 pb-4 mb-5 border-b border-slate-100 dark:border-slate-800">
+          <span class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </span>
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Account &amp; Currency Settings</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Configure your primary standardized currency and contact information</p>
+          </div>
+        </div>
+
+        <form action="{{ url_for('profile') }}" method="POST" class="space-y-4">
+          <input type="hidden" name="action" value="update_settings">
+          <input type="hidden" name="theme" id="formInputTheme" value="{{ user.theme or 'light' }}">
+
+          <!-- Username (Readonly) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Account Username
+            </label>
+            <input type="text" value="{{ user.username }}" readonly
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-semibold cursor-not-allowed">
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Username is unique and cannot be changed.</p>
+          </div>
+
+          <!-- Email Address -->
+          <div>
+            <label for="profileEmail" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Email Address (Optional)
+            </label>
+            <input type="email" id="profileEmail" name="email" value="{{ user.email or '' }}" placeholder="yourname@example.com"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+          </div>
+
+          <!-- Preferred Currency -->
+          <div>
+            <label for="profileCurrency" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Preferred Standard Currency <span class="text-rose-500">*</span>
+            </label>
+            <select id="profileCurrency" name="preferred_currency"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition cursor-pointer">
+              {% for c in supported_currencies %}
+              <option value="{{ c.code }}" {% if target_currency == c.code %}selected{% endif %}>
+                {{ c.code }} ({{ c.symbol }}) &mdash; {{ c.name }}
+              </option>
+              {% endfor %}
+            </select>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+              All scanned bills in foreign currencies (USD, EUR, GBP, etc.) will be automatically converted to this currency using live rates.
+            </p>
+          </div>
+
+          <div class="pt-3 flex justify-end">
+            <button type="submit"
+                    class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-700 text-white text-xs font-extrabold transition shadow-xs cursor-pointer">
+              💾 Save Profile Preferences
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Security & Data Privacy (4 cols) -->
+    <div class="lg:col-span-4 space-y-6">
+
+      <!-- Change Password Card -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+        <div class="flex items-center gap-2.5 pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800">
+          <span class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </span>
+          <div>
+            <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Change Password</h3>
+            <p class="text-[11px] text-slate-400">Update your vault password</p>
+          </div>
+        </div>
+
+        <form action="{{ url_for('profile') }}" method="POST" class="space-y-3.5">
+          <input type="hidden" name="action" value="change_password">
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              Current Password
+            </label>
+            <input type="password" name="current_password" required placeholder="••••••••"
+                   class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              New Password
+            </label>
+            <input type="password" name="new_password" required minlength="6" placeholder="Min 6 characters"
+                   class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              Confirm New Password
+            </label>
+            <input type="password" name="confirm_password" required minlength="6" placeholder="Repeat new password"
+                   class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+          </div>
+
+          <div class="pt-2">
+            <button type="submit"
+                    class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer">
+              🔐 Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Data Vault & Export Card -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white mb-2">Private Vault &amp; Backups</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          All your uploaded receipts, extracted metadata, and incomes are isolated strictly to your user account.
+        </p>
+
+        <div class="space-y-2.5">
+          <a href="{{ url_for('export_csv') }}"
+             class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Export All Bills to CSV</span>
+            </span>
+            <span class="text-[10px] uppercase font-mono text-slate-400">CSV</span>
+          </a>
+
+          <a href="{{ url_for('reports') }}"
+             class="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+              </svg>
+              <span>Monthly Financial Report</span>
+            </span>
+            <span class="text-[10px] uppercase font-mono text-slate-400">CHARTS</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const currentTheme = localStorage.getItem('theme') || '{{ user.theme or "light" }}';
+
+  function updateThemeUI(theme) {
+    const btnLight = document.getElementById('themeBtnLight');
+    const btnDark = document.getElementById('themeBtnDark');
+    const btnAuto = document.getElementById('themeBtnAuto');
+    const hiddenIn = document.getElementById('formInputTheme');
+    if (hiddenIn) hiddenIn.value = theme;
+
+    const cards = { 'light': btnLight, 'dark': btnDark, 'auto': btnAuto };
+
+    Object.keys(cards).forEach(key => {
+      const card = cards[key];
+      if (!card) return;
+      const dot = card.querySelector('.dot');
+      const indicator = card.querySelector('.theme-check-indicator');
+
+      if (key === theme) {
+        card.classList.add('border-brand-500', 'bg-brand-50/50', 'dark:bg-brand-950/30', 'ring-2', 'ring-brand-500/20');
+        card.classList.remove('border-slate-200', 'dark:border-slate-700');
+        if (dot) dot.classList.remove('hidden');
+        if (indicator) indicator.classList.add('border-brand-500', 'bg-white', 'dark:bg-slate-900');
+      } else {
+        card.classList.remove('border-brand-500', 'bg-brand-50/50', 'dark:bg-brand-950/30', 'ring-2', 'ring-brand-500/20');
+        card.classList.add('border-slate-200', 'dark:border-slate-700');
+        if (dot) dot.classList.add('hidden');
+        if (indicator) indicator.classList.remove('border-brand-500');
+      }
+    });
+  }
+
+  window.selectThemeMode = function(mode) {
+    updateThemeUI(mode);
+    if (window.applyTheme) {
+      window.applyTheme(mode);
+    } else {
+      localStorage.setItem('theme', mode);
+      if (mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      fetch("{{ url_for('api_update_theme') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: mode })
+      }).catch(() => {});
+    }
+  };
+
+  // Initialize selected card on load
+  updateThemeUI(currentTheme);
+})();
+</script>
+{% endblock %}

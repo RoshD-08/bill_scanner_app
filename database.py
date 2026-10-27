@@ -93,11 +93,13 @@ def init_db():
             conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
 
-            # Check and migrate preferred_currency column into users if missing
+            # Check and migrate preferred_currency and theme columns into users if missing
             cursor = conn.execute("PRAGMA table_info(users);")
             user_cols = [row["name"] for row in cursor.fetchall()]
             if "preferred_currency" not in user_cols:
                 conn.execute("ALTER TABLE users ADD COLUMN preferred_currency TEXT NOT NULL DEFAULT 'LKR';")
+            if "theme" not in user_cols:
+                conn.execute("ALTER TABLE users ADD COLUMN theme TEXT NOT NULL DEFAULT 'light';")
 
             # 2. Bills table
             conn.execute("""
@@ -213,7 +215,9 @@ def authenticate_user(username_or_email, password):
     conn = get_db()
     try:
         row = conn.execute("""
-            SELECT id, username, email, password_hash, preferred_currency, created_at
+            SELECT id, username, email, password_hash, preferred_currency,
+                   CASE WHEN theme IS NULL THEN 'light' ELSE theme END as theme,
+                   created_at
             FROM users
             WHERE username = ? OR email = ?
         """, (val, val.lower())).fetchone()
@@ -226,6 +230,7 @@ def authenticate_user(username_or_email, password):
                 "username": row["username"],
                 "email": row["email"],
                 "preferred_currency": row["preferred_currency"] or "LKR",
+                "theme": row["theme"] or "light",
                 "created_at": row["created_at"],
             }
         return None
@@ -239,12 +244,21 @@ def get_user_by_id(user_id):
         return None
     conn = get_db()
     try:
-        row = conn.execute("""
-            SELECT id, username, email, preferred_currency, created_at
-            FROM users
-            WHERE id = ?
-        """, (user_id,)).fetchone()
-        return dict(row) if row else None
+        cursor = conn.execute("PRAGMA table_info(users);")
+        cols = [r["name"] for r in cursor.fetchall()]
+        has_theme = "theme" in cols
+
+        if has_theme:
+            sql = "SELECT id, username, email, preferred_currency, theme, created_at FROM users WHERE id = ?"
+        else:
+            sql = "SELECT id, username, email, preferred_currency, 'light' as theme, created_at FROM users WHERE id = ?"
+
+        row = conn.execute(sql, (user_id,)).fetchone()
+        if row:
+            d = dict(row)
+            d["theme"] = d.get("theme") or "light"
+            return d
+        return None
     finally:
         conn.close()
 
@@ -259,6 +273,96 @@ def update_user_currency(user_id, currency):
         with conn:
             conn.execute("UPDATE users SET preferred_currency = ? WHERE id = ?", (clean_curr, user_id))
         return True
+    finally:
+        conn.close()
+
+
+def update_user_theme(user_id, theme):
+    """Update user's theme preference ('light', 'dark', 'auto')."""
+    if not user_id:
+        return False
+    t = (theme or "light").strip().lower()
+    if t not in ["light", "dark", "auto"]:
+        t = "light"
+    conn = get_db()
+    try:
+        with conn:
+            conn.execute("UPDATE users SET theme = ? WHERE id = ?", (t, user_id))
+        return True
+    finally:
+        conn.close()
+
+
+def update_user_profile(user_id, email=None, preferred_currency=None, theme=None):
+    """Update user's profile information (email, preferred_currency, theme)."""
+    if not user_id:
+        return False, "User not found."
+    conn = get_db()
+    try:
+        with conn:
+            fields = []
+            params = []
+            if email is not None:
+                clean_email = email.strip().lower() or None
+                fields.append("email = ?")
+                params.append(clean_email)
+            if preferred_currency is not None:
+                clean_curr = normalize_currency(preferred_currency)
+                fields.append("preferred_currency = ?")
+                params.append(clean_curr)
+            if theme is not None:
+                t = theme.strip().lower()
+                if t in ["light", "dark", "auto"]:
+                    fields.append("theme = ?")
+                    params.append(t)
+            if fields:
+                params.append(user_id)
+                conn.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", params)
+            return True, None
+    except sqlite3.IntegrityError:
+        return False, "That email is already registered to another account."
+    finally:
+        conn.close()
+
+
+def update_user_password(user_id, current_password, new_password):
+    """Verify current password and update to new password."""
+    if not user_id or not current_password or not new_password:
+        return False, "All password fields are required."
+    if len(new_password) < 6:
+        return False, "New password must be at least 6 characters long."
+
+    conn = get_db()
+    try:
+        row = conn.execute("SELECT password_hash FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not row or not check_password_hash(row["password_hash"], current_password):
+            return False, "Current password does not match our records."
+
+        new_hash = generate_password_hash(new_password)
+        with conn:
+            conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user_id))
+        return True, None
+    finally:
+        conn.close()
+
+
+def get_user_stats(user_id, target_currency="LKR"):
+    """Compute aggregate stats for user profile page."""
+    bills = get_all_bills(user_id=user_id, target_currency=target_currency)
+    conn = get_db()
+    try:
+        incomes_rows = conn.execute("SELECT amount, currency FROM incomes WHERE user_id = ?", (user_id,)).fetchall()
+        total_income_conv = sum(convert_currency(r["amount"], r["currency"], target_currency) for r in incomes_rows)
+        total_spent_conv = sum(b.get("total_amount_converted", 0.0) for b in bills)
+
+        return {
+            "bill_count": len(bills),
+            "total_spent": total_spent_conv,
+            "income_count": len(incomes_rows),
+            "total_income": total_income_conv,
+            "net_balance": total_income_conv - total_spent_conv,
+            "target_currency": target_currency
+        }
     finally:
         conn.close()
 
