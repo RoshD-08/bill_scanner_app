@@ -35,6 +35,7 @@ from ollama_extractor import (
     extract_bill_data_ollama, is_ollama_running,
     get_available_models
 )
+from financial_advisor import get_financial_advisor_reply
 
 # Load .env file
 load_dotenv()
@@ -756,6 +757,38 @@ def api_reports():
 
     report = get_monthly_financial_report(user_id=user_id, year=year, month=month, target_currency=target_curr)
     return jsonify(report)
+
+
+@app.route("/api/chat/advisor", methods=["POST"])
+@login_required
+def api_chat_advisor():
+    """
+    Intelligent Financial Advisor endpoint.
+    Processes user inquiries about spending reduction, budget planning,
+    and category analytics based on actual user financial data.
+    """
+    user_id = session.get("user_id")
+    data = request.get_json(silent=True) or request.form.to_dict()
+    if not data:
+        return jsonify({"error": "Invalid request payload."}), 400
+
+    message = (data.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "A question or message is required."}), 400
+
+    target_currency = (data.get("currency") or "").strip() or None
+    try:
+        reply_payload = get_financial_advisor_reply(
+            user_id=user_id,
+            message=message,
+            target_currency=target_currency
+        )
+        return jsonify(reply_payload)
+    except Exception as exc:
+        return jsonify({
+            "error": "Failed to generate financial advice.",
+            "details": str(exc)
+        }), 500
 
 
 if __name__ == "__main__":

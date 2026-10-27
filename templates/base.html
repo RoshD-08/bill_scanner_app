@@ -212,6 +212,294 @@
     };
   </script>
 
+  {% if current_user %}
+  <!-- Floating Financial Advisor Chatbot Widget -->
+  <div id="advisorWidgetContainer" class="no-print">
+    <!-- Floating Launcher Button -->
+    <button id="advisorLauncherBtn"
+            type="button"
+            onclick="toggleAdvisorChat()"
+            class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-brand-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-500/35 hover:shadow-indigo-500/50 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer group focus:outline-none focus:ring-4 focus:ring-brand-500/30"
+            aria-label="Open Financial Advisor AI Chatbot"
+            title="Chat with Financial Advisor AI">
+      <span class="relative flex items-center justify-center">
+        <svg class="w-6 h-6 transition-transform duration-200 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+        </svg>
+        <span class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900"></span>
+        </span>
+      </span>
+    </button>
+
+    <!-- Chat Modal Window -->
+    <div id="advisorChatWindow"
+         class="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[420px] h-[580px] max-h-[82vh] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col z-50 overflow-hidden transition-all duration-200 transform origin-bottom-right hidden">
+      
+      <!-- Window Header -->
+      <div class="bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-700 px-4 py-3.5 flex items-center justify-between text-white shadow-xs">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-lg shadow-2xs">
+            🤖
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-black text-sm tracking-tight leading-none text-white">Financial Advisor AI</h3>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-[10px] font-bold text-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live
+              </span>
+            </div>
+            <p class="text-[11px] text-indigo-100/90 font-medium mt-0.5">
+              Personalized for <strong class="text-white">{{ current_user.username }}</strong> &middot; {{ current_user.preferred_currency }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1 text-white/80">
+          <!-- Reset / Clear history -->
+          <button type="button"
+                  onclick="resetAdvisorChat()"
+                  title="Clear conversation history"
+                  class="p-1.5 rounded-lg hover:bg-white/15 hover:text-white transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+          <!-- Minimize / Close -->
+          <button type="button"
+                  onclick="toggleAdvisorChat(false)"
+                  title="Minimize chat"
+                  class="p-1.5 rounded-lg hover:bg-white/15 hover:text-white transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Body -->
+      <div id="advisorChatMessages" class="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs sm:text-sm bg-slate-50/50 dark:bg-slate-950/40 scroll-smooth">
+        <!-- Messages rendered dynamically via JS -->
+      </div>
+
+      <!-- Quick Suggestion Chips Bar -->
+      <div class="px-3 py-2 bg-slate-100/70 dark:bg-slate-900/90 border-t border-slate-200/80 dark:border-slate-800">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+          <span>✨ Quick Insights:</span>
+        </div>
+        <div id="advisorSuggestionChips" class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+          <button type="button" onclick="submitAdvisorChip('Where should I reduce spending?')" class="text-left whitespace-nowrap text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-brand-300 transition shadow-2xs cursor-pointer">
+            📉 Reduce Spending
+          </button>
+          <button type="button" onclick="submitAdvisorChip('How to manage my next month financially?')" class="text-left whitespace-nowrap text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-brand-300 transition shadow-2xs cursor-pointer">
+            📅 Next Month Budget
+          </button>
+          <button type="button" onclick="submitAdvisorChip('What is my highest expense category?')" class="text-left whitespace-nowrap text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-brand-300 transition shadow-2xs cursor-pointer">
+            🏷️ Top Category
+          </button>
+          <button type="button" onclick="submitAdvisorChip('Review my savings rate and cash flow')" class="text-left whitespace-nowrap text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-brand-300 transition shadow-2xs cursor-pointer">
+            💰 Savings Rate
+          </button>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div id="advisorTypingIndicator" class="hidden px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200/60 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+        <div class="flex space-x-1">
+          <div class="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <div class="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div class="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce"></div>
+        </div>
+        <span class="font-medium">Analyzing your financial records...</span>
+      </div>
+
+      <!-- Message Input Form -->
+      <form id="advisorChatForm" onsubmit="handleAdvisorSubmit(event)" class="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">
+        <input id="advisorChatInput"
+               type="text"
+               autocomplete="off"
+               placeholder="Ask for financial advice, spending reduction tips..."
+               class="flex-1 bg-slate-100 dark:bg-slate-800/90 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 px-3.5 py-2.5 rounded-xl border border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none text-xs sm:text-sm transition" />
+        <button id="advisorSendBtn"
+                type="submit"
+                class="p-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold transition shadow-xs flex-shrink-0 cursor-pointer disabled:opacity-50">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function initAdvisorChatbot() {
+      const STORAGE_KEY = 'billai_advisor_history_{{ current_user.id }}';
+
+      const welcomeMessage = {
+        role: 'assistant',
+        content: "👋 **Hello {{ current_user.username }}!**\n\nI am your personal **Financial Advisor AI**. I evaluate your income, bills, category spending, and burn rates in real-time to help you optimize your finances.\n\nAsk me anything, or tap a suggestion below like:\n* *\"Where should I reduce spending?\"*\n* *\"How to manage my next month financially?\"*\n* *\"What is my highest expense category?\"*"
+      };
+
+      function getHistory() {
+        try {
+          const raw = sessionStorage.getItem(STORAGE_KEY);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return [welcomeMessage];
+      }
+
+      function saveHistory(history) {
+        try {
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        } catch (e) {}
+      }
+
+      function formatMarkdown(text) {
+        if (!text) return '';
+        let escaped = text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+        // Headers
+        escaped = escaped.replace(/^### (.*$)/gim, '<div class="font-bold text-slate-900 dark:text-white mt-2 mb-1 text-xs sm:text-sm">$1</div>');
+        escaped = escaped.replace(/^## (.*$)/gim, '<div class="font-extrabold text-slate-900 dark:text-white mt-2.5 mb-1 text-sm">$1</div>');
+
+        // Bold
+        escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900 dark:text-white">$1</strong>');
+
+        // Bullets
+        escaped = escaped.replace(/^[\*\-] (.*$)/gim, '<div class="flex items-start gap-1.5 my-1 ml-0.5"><span class="text-brand-500 font-bold">•</span><span>$1</span></div>');
+
+        // Line breaks
+        escaped = escaped.replace(/\n\n/g, '<div class="h-2"></div>');
+        escaped = escaped.replace(/\n/g, '<br/>');
+        return escaped;
+      }
+
+      window.renderAdvisorChat = function() {
+        const container = document.getElementById('advisorChatMessages');
+        if (!container) return;
+        const history = getHistory();
+        container.innerHTML = history.map(msg => {
+          if (msg.role === 'user') {
+            return `
+              <div class="flex justify-end">
+                <div class="bg-gradient-to-r from-brand-600 to-indigo-600 text-white p-3 rounded-2xl rounded-tr-xs shadow-xs max-w-[85%] leading-relaxed">
+                  ${formatMarkdown(msg.content)}
+                </div>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="flex items-start gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5 border border-brand-200 dark:border-brand-800">
+                  AI
+                </div>
+                <div class="flex-1 bg-white dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 p-3.5 rounded-2xl rounded-tl-xs border border-slate-200/80 dark:border-slate-700/60 shadow-2xs leading-relaxed max-w-[92%]">
+                  ${formatMarkdown(msg.content)}
+                </div>
+              </div>
+            `;
+          }
+        }).join('');
+        container.scrollTop = container.scrollHeight;
+      };
+
+      window.toggleAdvisorChat = function(force) {
+        const win = document.getElementById('advisorChatWindow');
+        if (!win) return;
+        if (typeof force === 'boolean') {
+          if (force) win.classList.remove('hidden');
+          else win.classList.add('hidden');
+        } else {
+          win.classList.toggle('hidden');
+        }
+
+        if (!win.classList.contains('hidden')) {
+          window.renderAdvisorChat();
+          setTimeout(() => {
+            const input = document.getElementById('advisorChatInput');
+            if (input) input.focus();
+          }, 100);
+        }
+      };
+
+      window.resetAdvisorChat = function() {
+        if (confirm("Reset conversation with Financial Advisor?")) {
+          sessionStorage.removeItem(STORAGE_KEY);
+          window.renderAdvisorChat();
+        }
+      };
+
+      window.submitAdvisorChip = function(promptText) {
+        const input = document.getElementById('advisorChatInput');
+        if (input) {
+          input.value = promptText;
+          window.handleAdvisorSubmit(new Event('submit'));
+        }
+      };
+
+      window.handleAdvisorSubmit = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        const input = document.getElementById('advisorChatInput');
+        const sendBtn = document.getElementById('advisorSendBtn');
+        const typing = document.getElementById('advisorTypingIndicator');
+        const container = document.getElementById('advisorChatMessages');
+        if (!input) return;
+
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Append user prompt
+        const history = getHistory();
+        history.push({ role: 'user', content: text });
+        saveHistory(history);
+        input.value = '';
+        window.renderAdvisorChat();
+
+        // Lock form & show typing
+        if (sendBtn) sendBtn.disabled = true;
+        if (typing) typing.classList.remove('hidden');
+        if (container) container.scrollTop = container.scrollHeight;
+
+        try {
+          const resp = await fetch("{{ url_for('api_chat_advisor') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+          });
+
+          const data = await resp.json();
+          if (resp.ok && data.reply) {
+            history.push({ role: 'assistant', content: data.reply });
+          } else {
+            const err = data.error || "I was unable to analyze your finances at this moment. Please try again.";
+            history.push({ role: 'assistant', content: `⚠️ **Notice:** ${err}` });
+          }
+        } catch (err) {
+          history.push({
+            role: 'assistant',
+            content: "⚠️ **Connection Error:** Could not contact the financial advisor service. Please check your network and try again."
+          });
+        } finally {
+          saveHistory(history);
+          if (typing) typing.classList.add('hidden');
+          if (sendBtn) sendBtn.disabled = false;
+          window.renderAdvisorChat();
+          if (input) input.focus();
+        }
+      };
+
+      // Initial render if open
+      document.addEventListener('DOMContentLoaded', () => {
+        window.renderAdvisorChat();
+      });
+    })();
+  </script>
+  {% endif %}
+
   {% block scripts %}{% endblock %}
 </body>
 </html>
