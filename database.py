@@ -122,7 +122,10 @@ def create_user(username, password, email=None):
             # If this is the first registered user, claim existing unowned bills
             count_users = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
             if count_users == 1:
-                conn.execute("UPDATE bills SET user_id = ? WHERE user_id IS NULL", (user_id,))
+                conn.execute(
+                    "UPDATE bills SET user_id = ? WHERE user_id IS NULL OR user_id NOT IN (SELECT id FROM users)",
+                    (user_id,)
+                )
 
             row = conn.execute(
                 "SELECT id, username, email, created_at FROM users WHERE id = ?",
