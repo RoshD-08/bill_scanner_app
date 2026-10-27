@@ -363,186 +363,22 @@
       <p class="text-sm">No bills recorded yet. Upload your first bill above to see category breakdowns.</p>
     </div>
     {% endif %}
+
+    <!-- Footer Action to Dedicated All Bills Page -->
+    <div class="px-6 py-4 bg-slate-50/70 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="text-xs text-slate-500 font-medium">
+        Looking for individual invoices, receipts, and line item details?
+      </div>
+      <a href="{{ url_for('bills_page') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs">
+        <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span>View All Bills &amp; Receipts ({{ summary.total_count }}) &rarr;</span>
+      </a>
+    </div>
   </section>
 
-  <!-- ========================================== -->
-  <!-- 4. Detailed All Bills Table                -->
-  <!-- ========================================== -->
-  <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <div class="px-6 py-5 border-b border-slate-200">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900">All Bills & Receipts</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Filter, view receipts, and review individual line items</p>
-        </div>
-
-        <div class="text-xs text-slate-500 font-medium">
-          Showing <span id="billRowCount">{{ bills|length }}</span> bill records
-        </div>
-      </div>
-
-      <!-- Filters Row -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-        <!-- Search -->
-        <div>
-          <input type="text" id="searchFilter" placeholder="Search vendor, invoice..."
-                 class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-1 focus:ring-brand-500">
-        </div>
-        <!-- Category Filter -->
-        <div>
-          <select id="categoryFilter"
-                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:ring-1 focus:ring-brand-500">
-            <option value="">All Categories</option>
-            {% for cat in categories %}
-            <option value="{{ cat }}">{{ cat }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <!-- Date From -->
-        <div>
-          <input type="date" id="dateFromFilter"
-                 class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-1 focus:ring-brand-500">
-        </div>
-        <!-- Clear Filter -->
-        <div class="flex items-center gap-2">
-          <input type="date" id="dateToFilter"
-                 class="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-1 focus:ring-brand-500">
-          <button type="button" id="resetFiltersBtn"
-                  class="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-600 transition">
-            Reset
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {% if bills %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm" id="billsTable">
-        <thead>
-          <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-            <th class="py-3 px-4 w-12 text-center">#</th>
-            <th class="py-3 px-4">Date</th>
-            <th class="py-3 px-4">Vendor</th>
-            <th class="py-3 px-4">Category</th>
-            <th class="py-3 px-4">Invoice #</th>
-            <th class="py-3 px-4 text-center">Items</th>
-            <th class="py-3 px-4 text-right">Amount</th>
-            <th class="py-3 px-4">Payment</th>
-            <th class="py-3 px-4 text-center">Receipt</th>
-            <th class="py-3 px-4 text-center">Action</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100" id="billsTableBody">
-          {% for b in bills %}
-          <tr class="hover:bg-slate-50/75 transition bill-row"
-              data-vendor="{{ (b.vendor_name or '')|lower }}"
-              data-number="{{ (b.bill_number or '')|lower }}"
-              data-category="{{ b.category }}"
-              data-date="{{ b.bill_date or '' }}">
-            <td class="py-3.5 px-4 text-center text-xs font-mono text-slate-400">{{ b.id }}</td>
-            <td class="py-3.5 px-4 font-mono text-xs text-slate-700 whitespace-nowrap">{{ b.bill_date or '-' }}</td>
-            <td class="py-3.5 px-4 font-semibold text-slate-900">{{ b.vendor_name or 'Unknown' }}</td>
-            <td class="py-3.5 px-4">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                {{ b.category }}
-              </span>
-            </td>
-            <td class="py-3.5 px-4 font-mono text-xs text-slate-600">{{ b.bill_number or '-' }}</td>
-            <td class="py-3.5 px-4 text-center">
-              {% if b.line_items and b.line_items|length > 0 %}
-              <button type="button" onclick="showItemsModal({{ b.id }})"
-                      class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono font-semibold transition">
-                {{ b.line_items|length }} items
-              </button>
-              <!-- Hidden items json for modal -->
-              <script id="items-data-{{ b.id }}" type="application/json">{{ b.items_json|safe }}</script>
-              {% else %}
-              <span class="text-xs text-slate-400">-</span>
-              {% endif %}
-            </td>
-            <td class="py-3.5 px-4 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-              <div><span class="text-xs font-normal text-slate-400 mr-1">{{ b.currency }}</span>{{ "{:,.2f}".format(b.total_amount) }}</div>
-              {% if b.currency != target_currency and b.total_amount_converted is defined %}
-              <div class="text-[11px] font-semibold text-brand-600">
-                &asymp; {{ target_currency }} {{ "{:,.2f}".format(b.total_amount_converted) }}
-              </div>
-              {% endif %}
-            </td>
-            <td class="py-3.5 px-4 text-xs text-slate-600">{{ b.payment_method or '-' }}</td>
-            <td class="py-3.5 px-4 text-center">
-              {% if b.image_path %}
-              <button type="button" onclick="openReceiptModal('{{ url_for('static', filename='uploads/' + b.image_path) }}')"
-                      class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-800">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                View
-              </button>
-              {% endif %}
-            </td>
-            <td class="py-3.5 px-4 text-center">
-              <form action="{{ url_for('delete', bill_id=b.id) }}" method="POST"
-                    onsubmit="return confirm('Are you sure you want to delete this bill record?');"
-                    class="inline">
-                <button type="submit" class="text-rose-500 hover:text-rose-700 text-xs font-semibold p-1 transition" title="Delete">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="p-12 text-center text-slate-400">
-      <p class="text-sm">No bills saved yet.</p>
-    </div>
-    {% endif %}
-  </section>
-
-</div>
-
-<!-- ========================================== -->
-<!-- Modals                                     -->
-<!-- ========================================== -->
-
-<!-- Image Preview Modal -->
-<div id="imageModal" class="hidden fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-    <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-      <h3 class="font-bold text-slate-900 text-sm">Receipt Image</h3>
-      <button type="button" onclick="closeReceiptModal()" class="text-slate-400 hover:text-slate-700">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="p-4 flex-1 overflow-auto flex items-center justify-center bg-slate-100">
-      <img id="modalImg" src="" alt="Receipt" class="max-h-[75vh] w-auto object-contain rounded-lg">
-    </div>
-  </div>
-</div>
-
-<!-- Items Breakdown Modal -->
-<div id="itemsModal" class="hidden fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl max-w-xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-2xl">
-    <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-      <h3 class="font-bold text-slate-900 text-sm">Line Items Breakdown</h3>
-      <button type="button" onclick="closeItemsModal()" class="text-slate-400 hover:text-slate-700">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="p-6 overflow-y-auto">
-      <table class="w-full text-left text-xs">
-        <thead>
-          <tr class="border-b border-slate-200 text-slate-400 uppercase">
-            <th class="pb-2">Description</th>
-            <th class="pb-2 text-right">Qty</th>
-            <th class="pb-2 text-right">Unit Price</th>
-            <th class="pb-2 text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody id="itemsModalBody" class="divide-y divide-slate-100 font-mono text-slate-800"></tbody>
-      </table>
-    </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -770,94 +606,6 @@
     });
     document.getElementById('formItemsJson').value = JSON.stringify(items);
   });
-
-  // Client-Side Table Filtering
-  const searchFilter = document.getElementById('searchFilter');
-  const categoryFilter = document.getElementById('categoryFilter');
-  const dateFromFilter = document.getElementById('dateFromFilter');
-  const dateToFilter = document.getElementById('dateToFilter');
-  const resetBtn = document.getElementById('resetFiltersBtn');
-  const countSpan = document.getElementById('billRowCount');
-
-  function applyFilters() {
-    const q = (searchFilter.value || '').toLowerCase().trim();
-    const cat = categoryFilter.value;
-    const from = dateFromFilter.value;
-    const to = dateToFilter.value;
-
-    let visible = 0;
-    document.querySelectorAll('.bill-row').forEach(row => {
-      const vendor = row.getAttribute('data-vendor') || '';
-      const number = row.getAttribute('data-number') || '';
-      const rCat = row.getAttribute('data-category') || '';
-      const rDate = row.getAttribute('data-date') || '';
-
-      let match = true;
-      if (q && !vendor.includes(q) && !number.includes(q)) match = false;
-      if (cat && rCat !== cat) match = false;
-      if (from && rDate && rDate < from) match = false;
-      if (to && rDate && rDate > to) match = false;
-
-      row.style.display = match ? '' : 'none';
-      if (match) visible++;
-    });
-
-    if (countSpan) countSpan.textContent = visible;
-  }
-
-  [searchFilter, categoryFilter, dateFromFilter, dateToFilter].forEach(el => {
-    if (el) el.addEventListener('input', applyFilters);
-  });
-
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      searchFilter.value = '';
-      categoryFilter.value = '';
-      dateFromFilter.value = '';
-      dateToFilter.value = '';
-      applyFilters();
-    });
-  }
 })();
-
-// Modal helpers
-function openReceiptModal(src) {
-  document.getElementById('modalImg').src = src;
-  document.getElementById('imageModal').classList.remove('hidden');
-}
-function closeReceiptModal() {
-  document.getElementById('imageModal').classList.add('hidden');
-}
-
-function showItemsModal(id) {
-  const scriptTag = document.getElementById('items-data-' + id);
-  if (!scriptTag) return;
-  try {
-    const items = JSON.parse(scriptTag.textContent);
-    const tbody = document.getElementById('itemsModalBody');
-    tbody.innerHTML = '';
-    if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-slate-400">No line items</td></tr>';
-    } else {
-      items.forEach(it => {
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-slate-100';
-        tr.innerHTML = `
-          <td class="py-2 font-sans font-medium text-slate-900">${it.name || 'Item'}</td>
-          <td class="py-2 text-right font-mono">${it.quantity !== undefined && it.quantity !== null ? it.quantity : (it.qty || 1)}</td>
-          <td class="py-2 text-right font-mono">${parseFloat(it.unit_price || 0).toFixed(2)}</td>
-          <td class="py-2 text-right font-bold">${parseFloat(it.total || 0).toFixed(2)}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-    document.getElementById('itemsModal').classList.remove('hidden');
-  } catch(e) {
-    console.error(e);
-  }
-}
-function closeItemsModal() {
-  document.getElementById('itemsModal').classList.add('hidden');
-}
 </script>
 {% endblock %}

@@ -57,9 +57,17 @@
           <a href="{{ url_for('index') }}"
              class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {% if request.endpoint == 'index' %}bg-slate-100 text-slate-900 border border-slate-200/80 shadow-2xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            Scanner &amp; Bills
+            Scan &amp; Dashboard
+          </a>
+
+          <a href="{{ url_for('bills_page') }}"
+             class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {% if request.endpoint == 'bills_page' %}bg-slate-100 text-slate-900 border border-slate-200/80 shadow-2xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            All Bills &amp; Receipts
           </a>
 
           <!-- High-Visibility Reports & Charts Button in Navbar -->
@@ -128,14 +136,18 @@
 
   {% if current_user %}
   <!-- Mobile Navigation Bar -->
-  <div class="sm:hidden bg-slate-900 border-b border-indigo-950 px-4 py-2.5 flex items-center justify-around text-xs font-bold no-print shadow-sm">
+  <div class="sm:hidden bg-slate-900 border-b border-indigo-950 px-3 py-2 flex items-center justify-around text-xs font-bold no-print shadow-sm">
     <a href="{{ url_for('index') }}"
-       class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition {% if request.endpoint == 'index' %}bg-white/15 text-white{% else %}text-slate-300 hover:text-white{% endif %}">
-      <span>🧾 Scanner &amp; Bills</span>
+       class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl transition {% if request.endpoint == 'index' %}bg-white/15 text-white{% else %}text-slate-300 hover:text-white{% endif %}">
+      <span>⚡ Scan</span>
+    </a>
+    <a href="{{ url_for('bills_page') }}"
+       class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl transition {% if request.endpoint == 'bills_page' %}bg-white/15 text-white{% else %}text-slate-300 hover:text-white{% endif %}">
+      <span>🧾 All Bills</span>
     </a>
     <a href="{{ url_for('reports') }}"
-       class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xs font-extrabold">
-      <span>📊 Reports &amp; Charts</span>
+       class="flex items-center gap-1 px-3 py-1.5 rounded-xl transition bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xs font-extrabold">
+      <span>📊 Reports</span>
     </a>
   </div>
   {% endif %}

@@ -245,6 +245,24 @@ def index():
     )
 
 
+@app.route("/bills")
+@login_required
+def bills_page():
+    """Dedicated page for viewing, searching, and filtering all user bills and receipts."""
+    user_id = session.get("user_id")
+    user = get_user_by_id(user_id)
+    target_curr = user.get("preferred_currency", "LKR") if user else "LKR"
+
+    bills = get_all_bills(user_id=user_id, target_currency=target_curr)
+
+    return render_template(
+        "bills.html",
+        bills=bills,
+        categories=CATEGORIES,
+        target_currency=target_curr
+    )
+
+
 @app.route("/api/currency/rates")
 def api_currency_rates():
     """Return current exchange rates relative to base currency."""
@@ -388,7 +406,7 @@ def delete(bill_id):
     else:
         flash("Bill not found or you do not have permission to delete it.", "error")
 
-    return redirect(url_for("index"))
+    return redirect(request.referrer or url_for("bills_page"))
 
 
 @app.route("/export/csv")
