@@ -645,6 +645,7 @@ def reports():
         year, month = now.year, now.month
 
     report = get_monthly_financial_report(user_id=user_id, year=year, month=month, target_currency=target_curr)
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     return render_template(
         "reports.html",
@@ -655,7 +656,8 @@ def reports():
         cat_colors=CATEGORY_COLORS,
         inc_colors=INCOME_COLORS,
         currencies=SUPPORTED_CURRENCIES,
-        target_currency=target_curr
+        target_currency=target_curr,
+        generated_at=generated_at
     )
 
 

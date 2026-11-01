@@ -100,21 +100,33 @@
     </div>
   </div>
 
-  <!-- Print Header Only -->
-  <div class="hidden print-header p-4 border-b border-slate-300">
-    <div class="flex items-center justify-between">
+  <!-- Print Header Only (Official Statement Banner) -->
+  <div class="hidden print-header mb-6 pb-4 border-b-2 border-slate-900">
+    <div class="flex items-start justify-between">
       <div>
-        <h1 class="text-xl font-bold">Monthly Financial Report &middot; {{ report.period_label }}</h1>
-        <p class="text-xs text-slate-500">User: {{ current_user.username }} | Standardized Currency: {{ target_currency }}</p>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl font-black tracking-tight text-slate-900">BillAI</span>
+          <span class="text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded bg-slate-900 text-white">Financial Statement</span>
+        </div>
+        <h1 class="text-lg font-bold text-slate-900 mt-1">Monthly Financial Report &middot; {{ report.period_label }}</h1>
+        <p class="text-xs text-slate-600 mt-0.5">
+          Account User: <strong class="text-slate-900">{{ current_user.username }}</strong> &middot; Reporting Currency: <strong class="text-slate-900">{{ target_currency }}</strong>
+        </p>
       </div>
-      <div class="text-xs font-mono text-slate-500">Generated on {{ report.period }}</div>
+      <div class="text-right text-xs text-slate-600">
+        <div class="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">
+          Status: {% if report.net_savings >= 0 %}<span class="text-emerald-700">Net Surplus</span>{% else %}<span class="text-rose-700">Net Deficit</span>{% endif %}
+        </div>
+        <div class="font-mono text-xs mt-1">Statement Period: <strong class="text-slate-900">{{ report.period }}</strong></div>
+        <div class="font-mono text-[11px] text-slate-500 mt-0.5">Generated: {{ generated_at or (report.period ~ '-01') }}</div>
+      </div>
     </div>
   </div>
 
   <!-- ========================================== -->
   <!-- 2. Four Key Performance Indicator (KPI) Cards -->
   <!-- ========================================== -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 kpi-section">
 
     <!-- Card 1: Total Monthly Income -->
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-xs relative overflow-hidden transition-colors">
@@ -128,7 +140,7 @@
       </div>
       <div class="mt-3">
         <div class="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-          {{ target_currency }} {{ "%.2f"|format(report.total_income) }}
+          {{ target_currency }} {{ "{:,.2f}".format(report.total_income) }}
         </div>
         <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span>{{ report.incomes|length }} sources recorded</span>
@@ -156,7 +168,7 @@
       </div>
       <div class="mt-3">
         <div class="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-          {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+          {{ target_currency }} {{ "{:,.2f}".format(report.total_expenditure) }}
         </div>
         <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span>{{ report.bills|length }} bills scanned</span>
@@ -190,7 +202,7 @@
       </div>
       <div class="mt-3">
         <div class="text-2xl font-black font-mono tracking-tight {% if report.net_savings >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
-          {% if report.net_savings >= 0 %}+{% endif %}{{ target_currency }} {{ "%.2f"|format(report.net_savings) }}
+          {% if report.net_savings >= 0 %}+{% endif %}{{ target_currency }} {{ "{:,.2f}".format(report.net_savings) }}
         </div>
         <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span class="font-bold {% if report.net_savings >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
@@ -215,7 +227,7 @@
       </div>
       <div class="mt-3">
         <div class="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-          {{ target_currency }} {{ "%.2f"|format(report.daily_avg_spend) }}
+          {{ target_currency }} {{ "{:,.2f}".format(report.daily_avg_spend) }}
         </div>
         <div class="flex items-center gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400 truncate">
           {% if report.top_expense_category %}
@@ -233,7 +245,7 @@
   <!-- ========================================== -->
   <!-- 3. Interactive Charts Grid (Pie & Timeline)-->
   <!-- ========================================== -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 charts-section">
 
     <!-- Left: Expenditure Categories (Interactive Pie / Donut Chart) -->
     <div class="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between transition-colors">
@@ -244,7 +256,7 @@
             <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Expenditure by Category</h2>
           </div>
           <span class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent dark:border-slate-700 font-bold font-mono">
-            {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+            {{ target_currency }} {{ "{:,.2f}".format(report.total_expenditure) }}
           </span>
         </div>
         <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">
@@ -260,7 +272,7 @@
         </div>
 
         <!-- Category Legend with Amounts & Progress Bars -->
-        <div class="space-y-3 mt-6 max-h-60 overflow-y-auto pr-1">
+        <div class="space-y-3 mt-6 max-h-60 overflow-y-auto pr-1 category-legend-container">
           {% for cat in report.expense_categories %}
           <div class="p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
             <div class="flex items-center justify-between text-xs mb-1">
@@ -270,7 +282,7 @@
                 <span class="text-slate-400 dark:text-slate-500">({{ cat.bill_count }})</span>
               </div>
               <div class="text-right flex-shrink-0 font-mono">
-                <span class="font-extrabold text-slate-900 dark:text-white">{{ target_currency }} {{ "%.2f"|format(cat.total_amount) }}</span>
+                <span class="font-extrabold text-slate-900 dark:text-white">{{ target_currency }} {{ "{:,.2f}".format(cat.total_amount) }}</span>
                 <span class="text-slate-500 dark:text-slate-400 ml-1">({{ cat.percentage }}%)</span>
               </div>
             </div>
@@ -338,7 +350,7 @@
                 <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{{ inc_cat.category }}</span>
               </div>
               <div class="text-sm font-black font-mono text-slate-900 dark:text-white">
-                {{ target_currency }} {{ "%.2f"|format(inc_cat.total_amount) }}
+                {{ target_currency }} {{ "{:,.2f}".format(inc_cat.total_amount) }}
               </div>
               <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{{ inc_cat.percentage }}% of income</div>
             </div>
@@ -351,10 +363,13 @@
 
   </div>
 
+  <!-- Print Page Break: cleanly transitions visual charts on Page 1 to Itemized Tables on Page 2 -->
+  <div class="print-page-break"></div>
+
   <!-- ========================================== -->
   <!-- 4. Detailed Breakdown Tables & Tabs        -->
   <!-- ========================================== -->
-  <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+  <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden transition-colors statement-container">
 
     <!-- Tabs Header -->
     <div class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/60 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
@@ -388,47 +403,47 @@
     <!-- Tab Content 1: Expenditures Table -->
     <div id="tabContentExpenses" class="p-6">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-slate-900 dark:text-white">
-          Bills &amp; Scanned Receipts for {{ report.period_label }}
+        <h3 class="text-sm font-bold text-slate-900 dark:text-white print:text-base print:font-extrabold print:border-b print:pb-1">
+          Itemized Expenditures &amp; Scanned Receipts ({{ report.period_label }})
         </h3>
         <span class="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
-          Total: {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+          Total: {{ target_currency }} {{ "{:,.2f}".format(report.total_expenditure) }}
         </span>
       </div>
 
       {% if report.bills %}
-      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-        <table class="w-full text-left text-xs">
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 table-wrapper">
+        <table class="w-full text-left text-xs table-fixed">
           <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 text-[11px]">
             <tr>
-              <th class="py-3 px-4">Date</th>
-              <th class="py-3 px-4">Vendor</th>
-              <th class="py-3 px-4">Category</th>
-              <th class="py-3 px-4">Payment</th>
-              <th class="py-3 px-4 text-right">Original Amount</th>
-              <th class="py-3 px-4 text-right">Converted ({{ target_currency }})</th>
-              <th class="py-3 px-4 text-center">Receipt</th>
+              <th class="py-2.5 px-3 w-[12%]">Date</th>
+              <th class="py-2.5 px-3 w-[26%]">Vendor / Payee</th>
+              <th class="py-2.5 px-3 w-[18%]">Category</th>
+              <th class="py-2.5 px-3 w-[14%]">Payment</th>
+              <th class="py-2.5 px-3 w-[15%] text-right">Original</th>
+              <th class="py-2.5 px-3 w-[15%] text-right">Converted ({{ target_currency }})</th>
+              <th class="py-2.5 px-3 w-[8%] text-center no-print">Receipt</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             {% for b in report.bills %}
             <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition">
-              <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ b.bill_date or '-' }}</td>
-              <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ b.vendor_name or 'Unknown Vendor' }}</td>
-              <td class="py-3 px-4">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700">
-                  <span class="w-2 h-2 rounded-full" style="background-color: {{ cat_colors.get(b.category, '#94A3B8') if cat_colors else '#6366F1' }};"></span>
-                  {{ b.category }}
+              <td class="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ b.bill_date or '-' }}</td>
+              <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white truncate" title="{{ b.vendor_name }}">{{ b.vendor_name or 'Unknown Vendor' }}</td>
+              <td class="py-2.5 px-3">
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700">
+                  <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: {{ cat_colors.get(b.category, '#94A3B8') if cat_colors else '#6366F1' }};"></span>
+                  <span class="truncate">{{ b.category }}</span>
                 </span>
               </td>
-              <td class="py-3 px-4 text-slate-600 dark:text-slate-400">{{ b.payment_method or '-' }}</td>
-              <td class="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                {{ b.currency }} {{ "%.2f"|format(b.total_amount) }}
+              <td class="py-2.5 px-3 text-slate-600 dark:text-slate-400">{{ b.payment_method or '-' }}</td>
+              <td class="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                {{ b.currency }} {{ "{:,.2f}".format(b.total_amount) }}
               </td>
-              <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                {{ target_currency }} {{ "%.2f"|format(b.total_amount_converted) }}
+              <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                {{ target_currency }} {{ "{:,.2f}".format(b.total_amount_converted) }}
               </td>
-              <td class="py-3 px-4 text-center">
+              <td class="py-2.5 px-3 text-center no-print">
                 {% if b.image_path and b.image_path != '' %}
                 <a href="{{ url_for('static', filename='uploads/' ~ b.image_path) }}"
                    target="_blank"
@@ -449,13 +464,14 @@
             </tr>
             {% endfor %}
           </tbody>
-          <tfoot class="bg-slate-50 dark:bg-slate-800/80 font-bold border-t border-slate-200 dark:border-slate-700">
+          <tfoot class="bg-slate-50 dark:bg-slate-800/80 font-bold border-t-2 border-slate-300 dark:border-slate-700">
             <tr>
-              <td colspan="5" class="py-3 px-4 text-right text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">Total Expenditures:</td>
-              <td class="py-3 px-4 text-right font-mono text-slate-900 dark:text-white text-sm">
-                {{ target_currency }} {{ "%.2f"|format(report.total_expenditure) }}
+              <td colspan="4" class="py-2.5 px-3 text-right text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">Total Expenditures:</td>
+              <td class="py-2.5 px-3 text-right font-mono text-slate-500 text-xs"></td>
+              <td class="py-2.5 px-3 text-right font-mono text-slate-900 dark:text-white text-xs sm:text-sm whitespace-nowrap font-black">
+                {{ target_currency }} {{ "{:,.2f}".format(report.total_expenditure) }}
               </td>
-              <td></td>
+              <td class="no-print"></td>
             </tr>
           </tfoot>
         </table>
@@ -471,15 +487,18 @@
       {% endif %}
     </div>
 
-    <!-- Tab Content 2: Incomes Table (Hidden by default) -->
-    <div id="tabContentIncomes" class="p-6 hidden">
+    <!-- Tab Content 2: Incomes Table (Hidden by default on screen; included in statement print) -->
+    <div id="tabContentIncomes" class="p-6 hidden {% if not report.incomes %}no-print{% endif %}">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+        <h3 class="text-sm font-bold text-slate-900 dark:text-white print:text-base print:font-extrabold print:border-b print:pb-1">
           Incomes Recorded for {{ report.period_label }}
         </h3>
+        <span class="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 print:inline-block hidden">
+          Total: {{ target_currency }} {{ "{:,.2f}".format(report.total_income) }}
+        </span>
         <button type="button"
                 onclick="openIncomeModal()"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer">
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer no-print">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
@@ -488,37 +507,37 @@
       </div>
 
       {% if report.incomes %}
-      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-        <table class="w-full text-left text-xs">
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 table-wrapper">
+        <table class="w-full text-left text-xs table-fixed">
           <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 text-[11px]">
             <tr>
-              <th class="py-3 px-4">Date</th>
-              <th class="py-3 px-4">Source / Title</th>
-              <th class="py-3 px-4">Category</th>
-              <th class="py-3 px-4">Notes</th>
-              <th class="py-3 px-4 text-right">Original Amount</th>
-              <th class="py-3 px-4 text-right">Converted ({{ target_currency }})</th>
-              <th class="py-3 px-4 text-center">Action</th>
+              <th class="py-2.5 px-3 w-[12%]">Date</th>
+              <th class="py-2.5 px-3 w-[26%]">Source / Title</th>
+              <th class="py-2.5 px-3 w-[18%]">Category</th>
+              <th class="py-2.5 px-3 w-[14%]">Notes</th>
+              <th class="py-2.5 px-3 w-[15%] text-right">Original</th>
+              <th class="py-2.5 px-3 w-[15%] text-right">Converted ({{ target_currency }})</th>
+              <th class="py-2.5 px-3 w-[8%] text-center no-print">Action</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             {% for inc in report.incomes %}
             <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition">
-              <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ inc.income_date or '-' }}</td>
-              <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ inc.source }}</td>
-              <td class="py-3 px-4">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
-                  {{ inc.category }}
+              <td class="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ inc.income_date or '-' }}</td>
+              <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white truncate" title="{{ inc.source }}">{{ inc.source }}</td>
+              <td class="py-2.5 px-3">
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
+                  <span class="truncate">{{ inc.category }}</span>
                 </span>
               </td>
-              <td class="py-3 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">{{ inc.notes or '-' }}</td>
-              <td class="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                {{ inc.currency }} {{ "%.2f"|format(inc.amount) }}
+              <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 truncate" title="{{ inc.notes or '' }}">{{ inc.notes or '-' }}</td>
+              <td class="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                {{ inc.currency }} {{ "{:,.2f}".format(inc.amount) }}
               </td>
-              <td class="py-3 px-4 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                {{ target_currency }} {{ "%.2f"|format(inc.amount_converted) }}
+              <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                {{ target_currency }} {{ "{:,.2f}".format(inc.amount_converted) }}
               </td>
-              <td class="py-3 px-4 text-center">
+              <td class="py-2.5 px-3 text-center no-print">
                 <form action="{{ url_for('api_delete_income', income_id=inc.id) }}"
                       method="POST"
                       onsubmit="return confirm('Are you sure you want to delete this income entry?');"
@@ -536,13 +555,14 @@
             </tr>
             {% endfor %}
           </tbody>
-          <tfoot class="bg-slate-50 dark:bg-slate-800/80 font-bold border-t border-slate-200 dark:border-slate-700">
+          <tfoot class="bg-slate-50 dark:bg-slate-800/80 font-bold border-t-2 border-slate-300 dark:border-slate-700">
             <tr>
-              <td colspan="5" class="py-3 px-4 text-right text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">Total Income:</td>
-              <td class="py-3 px-4 text-right font-mono text-emerald-700 dark:text-emerald-400 text-sm">
-                {{ target_currency }} {{ "%.2f"|format(report.total_income) }}
+              <td colspan="4" class="py-2.5 px-3 text-right text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]">Total Income:</td>
+              <td class="py-2.5 px-3 text-right font-mono text-slate-500 text-xs"></td>
+              <td class="py-2.5 px-3 text-right font-mono text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm whitespace-nowrap font-black">
+                {{ target_currency }} {{ "{:,.2f}".format(report.total_income) }}
               </td>
-              <td></td>
+              <td class="no-print"></td>
             </tr>
           </tfoot>
         </table>
@@ -966,25 +986,224 @@
 
 <style>
   @media print {
-    .no-print, header, footer, #incomeModal {
+    @page {
+      size: A4 portrait;
+      margin: 12mm 15mm 15mm 15mm;
+    }
+
+    /* 1. Hide non-printable interactive elements */
+    .no-print,
+    header,
+    footer,
+    #incomeModal,
+    #advisorWidgetContainer,
+    #advisorFloatingBtn,
+    #chatAdvisorDrawer,
+    .advisor-widget {
       display: none !important;
     }
-    .print-header {
-      display: block !important;
-    }
-    body {
-      background: white !important;
-      color: black !important;
+
+    /* 2. Global Document Reset */
+    html, body {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      font-size: 11pt !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     main {
       padding: 0 !important;
       max-width: 100% !important;
+      margin: 0 !important;
     }
-    .shadow-sm, .shadow-xs, .shadow-2xs {
+    .shadow-sm, .shadow-xs, .shadow-2xs, .shadow-lg, .shadow-xl, .shadow-2xl {
       box-shadow: none !important;
     }
     .border {
-      border-color: #CBD5E1 !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    /* 3. Official Statement Header */
+    .print-header {
+      display: block !important;
+      margin-bottom: 14px !important;
+      padding-bottom: 10px !important;
+      border-bottom: 2px solid #0f172a !important;
+    }
+
+    /* 4. KPI Summary Cards (Compact 4-column row on Page 1) */
+    .kpi-section {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 10px !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      margin-bottom: 14px !important;
+    }
+    .kpi-section > div {
+      padding: 8px 10px !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 8px !important;
+      background: #f8fafc !important;
+    }
+    .kpi-section .text-2xl {
+      font-size: 13pt !important;
+      line-height: 1.2 !important;
+    }
+    .kpi-section .text-xs {
+      font-size: 8pt !important;
+    }
+    .kpi-section .w-10.h-10 {
+      width: 28px !important;
+      height: 28px !important;
+    }
+    .kpi-section svg {
+      width: 14px !important;
+      height: 14px !important;
+    }
+
+    /* 5. Executive Charts & Distribution Visuals (Page 1) */
+    .charts-section {
+      display: grid !important;
+      grid-template-columns: 5fr 7fr !important;
+      gap: 14px !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    .charts-section > div {
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 8px !important;
+      padding: 10px 12px !important;
+      background: #ffffff !important;
+    }
+    .charts-section h2 {
+      font-size: 10.5pt !important;
+    }
+    .charts-section p.text-xs {
+      font-size: 7.5pt !important;
+      margin-bottom: 8px !important;
+    }
+    .charts-section .w-64.h-64 {
+      width: 145px !important;
+      height: 145px !important;
+      margin: 0 auto !important;
+    }
+    .charts-section canvas {
+      max-height: 155px !important;
+      max-width: 100% !important;
+    }
+    .charts-section #containerCashFlowChart {
+      height: 165px !important;
+    }
+    .charts-section .category-legend-container {
+      max-height: none !important;
+      overflow: visible !important;
+      margin-top: 6px !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 4px 8px !important;
+    }
+    .charts-section .category-legend-container > div {
+      padding: 2px 4px !important;
+      border: none !important;
+    }
+    .charts-section .category-legend-container .text-xs {
+      font-size: 7.5pt !important;
+    }
+    .charts-section .category-legend-container .h-1.5 {
+      height: 4px !important;
+    }
+
+    /* 6. Clean Page Break: separates summary visuals from itemized ledgers */
+    .print-page-break {
+      page-break-before: always !important;
+      break-before: page !important;
+      height: 0 !important;
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* 7. Statement Ledgers & Tables (Page 2+) */
+    .statement-container {
+      border: none !important;
+      background: transparent !important;
+      border-radius: 0 !important;
+    }
+    #tabContentExpenses,
+    #tabContentIncomes {
+      display: block !important;
+      padding: 0 !important;
+      margin-bottom: 22px !important;
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+    }
+    #tabContentIncomes.no-print {
+      display: none !important;
+    }
+    #tabContentExpenses.no-print {
+      display: none !important;
+    }
+    #tabContentExpenses h3,
+    #tabContentIncomes h3 {
+      font-size: 11pt !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      margin-bottom: 6px !important;
+      padding-bottom: 4px !important;
+      border-bottom: 1.5px solid #0f172a !important;
+    }
+    .table-wrapper {
+      border: 1px solid #cbd5e1 !important;
+      overflow: visible !important;
+      border-radius: 6px !important;
+    }
+    table {
+      width: 100% !important;
+      table-layout: fixed !important;
+      border-collapse: collapse !important;
+      font-size: 8pt !important;
+    }
+    thead {
+      display: table-header-group !important;
+      background: #f1f5f9 !important;
+    }
+    thead th {
+      color: #1e293b !important;
+      font-weight: 800 !important;
+      padding: 5px 6px !important;
+      border-bottom: 1.5px solid #64748b !important;
+      font-size: 7.5pt !important;
+      text-transform: uppercase !important;
+    }
+    tbody {
+      display: table-row-group !important;
+    }
+    tbody tr {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    tbody tr:nth-child(even) {
+      background-color: #f8fafc !important;
+    }
+    tbody td {
+      padding: 5px 6px !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      color: #0f172a !important;
+      font-size: 8pt !important;
+      vertical-align: middle !important;
+    }
+    tfoot {
+      display: table-footer-group !important;
+      background: #f8fafc !important;
+    }
+    tfoot td {
+      padding: 6px 6px !important;
+      border-top: 2px solid #0f172a !important;
+      border-bottom: 3px double #0f172a !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      font-size: 8.5pt !important;
     }
   }
 </style>
