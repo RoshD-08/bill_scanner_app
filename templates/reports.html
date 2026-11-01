@@ -37,15 +37,22 @@
             </svg>
           </a>
 
-          <select id="monthSelector"
-                  onchange="location.href='{{ url_for('reports') }}?month=' + this.value"
-                  class="bg-transparent text-xs sm:text-sm font-bold text-slate-800 dark:text-white px-2.5 py-1 focus:outline-hidden cursor-pointer">
-            {% for m in available_months %}
-            <option value="{{ m.value }}" {% if m.value == selected_month %}selected{% endif %} class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">
-              {{ m.label }}
-            </option>
-            {% endfor %}
-          </select>
+          <div class="relative flex items-center">
+            <select id="monthSelector"
+                    onchange="location.href='{{ url_for('reports') }}?month=' + this.value"
+                    class="bg-transparent text-xs sm:text-sm font-bold text-slate-800 dark:text-white pl-2.5 pr-6 py-1 focus:outline-hidden cursor-pointer appearance-none">
+              {% for m in available_months %}
+              <option value="{{ m.value }}" {% if m.value == selected_month %}selected{% endif %} class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">
+                {{ m.label }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="pointer-events-none absolute right-1.5 flex items-center text-slate-400">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </div>
+          </div>
 
           <a href="{{ url_for('reports', month=report.next_month) }}"
              title="Next Month"
@@ -605,14 +612,21 @@
           <label for="incomeCategory" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
             Category <span class="text-rose-500">*</span>
           </label>
-          <select id="incomeCategory"
-                  name="category"
-                  required
-                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
-            {% for cat in income_categories %}
-            <option value="{{ cat }}">{{ cat }}</option>
-            {% endfor %}
-          </select>
+          <div class="relative">
+            <select id="incomeCategory"
+                    name="category"
+                    required
+                    class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer appearance-none">
+              {% for cat in income_categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+              {% endfor %}
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 dark:text-slate-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -647,18 +661,25 @@
           <label for="incomeCurrency" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
             Currency <span class="text-rose-500">*</span>
           </label>
-          <select id="incomeCurrency"
-                  name="currency"
-                  required
-                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer">
-            {% for c in currencies %}
-            {% set code = c.code if c is mapping else c %}
-            {% set label = (c.code ~ ' (' ~ c.symbol ~ ') — ' ~ c.name) if c is mapping else c %}
-            <option value="{{ code }}" {% if code == target_currency %}selected{% endif %}>
-              {{ label }}
-            </option>
-            {% endfor %}
-          </select>
+          <div class="relative">
+            <select id="incomeCurrency"
+                    name="currency"
+                    required
+                    class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer appearance-none">
+              {% for c in currencies %}
+              {% set code = c.code if c is mapping else c %}
+              {% set label = (c.code ~ ' (' ~ c.symbol ~ ') — ' ~ c.name) if c is mapping else c %}
+              <option value="{{ code }}" {% if code == target_currency %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 dark:text-slate-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
