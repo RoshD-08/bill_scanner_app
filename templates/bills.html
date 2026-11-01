@@ -328,7 +328,9 @@
           </label>
           <select name="currency" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm text-slate-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition cursor-pointer">
             {% for c in currencies %}
-            <option value="{{ c }}" {% if c == target_currency %}selected{% endif %}>{{ c }}</option>
+            {% set code = c.code if c is mapping else c %}
+            {% set label = (c.code ~ ' (' ~ c.symbol ~ ') — ' ~ c.name) if c is mapping else c %}
+            <option value="{{ code }}" {% if code == target_currency %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
         </div>
